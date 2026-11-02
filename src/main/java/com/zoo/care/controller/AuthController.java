@@ -1,6 +1,8 @@
 package com.zoo.care.controller;
 
 import com.zoo.care.dto.RegisterRequest;
+import com.zoo.care.exception.BusinessRuleException;
+import com.zoo.care.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 @Controller
 @RequiredArgsConstructor
 public class AuthController {
+    private final UserService userService;
 
     @GetMapping("/login")
     public String loginPage() {
@@ -32,10 +35,10 @@ public class AuthController {
             return "register";
         }
         try {
-            // TODO: call userService.register(regRequest)
+            userService.register(regRequest);
             return "redirect:/login?registered";
-        } catch (Exception e) {
-            // TODO: catch username/email already taken exceptions
+        } catch (BusinessRuleException e) {
+            binResult.reject("duplicate", e.getMessage());
             return "register";
         }
     }
