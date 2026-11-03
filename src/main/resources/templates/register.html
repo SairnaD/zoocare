@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Register')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-sm-10 col-md-6 col-lg-4">
+            <h1 class="h3 mb-4 text-center">Create account</h1>
+
+            <form th:action="@{/register}" th:object="${registerRequest}" method="post" novalidate>
+
+                <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger">
+                    <p th:each="error : ${#fields.globalErrors()}" th:text="${error}" class="mb-0">Error</p>
+                </div>
+
+                <div class="mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" th:field="*{username}" th:errorclass="is-invalid"
+                           class="form-control" autocomplete="username">
+                    <div th:if="${#fields.hasErrors('username')}" th:errors="*{username}"
+                         class="invalid-feedback">Username error</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="fullName" class="form-label">Full name</label>
+                    <input type="text" th:field="*{fullName}" th:errorclass="is-invalid"
+                           class="form-control" autocomplete="name">
+                    <div th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"
+                         class="invalid-feedback">Full name error</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" th:field="*{email}" th:errorclass="is-invalid"
+                           class="form-control" autocomplete="email">
+                    <div th:if="${#fields.hasErrors('email')}" th:errors="*{email}"
+                         class="invalid-feedback">Email error</div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" th:field="*{password}" th:errorclass="is-invalid"
+                           class="form-control" autocomplete="new-password">
+                    <div class="form-text">At least 8 characters.</div>
+                    <div th:if="${#fields.hasErrors('password')}" th:errors="*{password}"
+                         class="invalid-feedback">Password error</div>
+                </div>
+
+                <button type="submit" class="btn btn-success w-100">Register</button>
+            </form>
+
+            <p class="text-center mt-3">
+                Already have an account? <a th:href="@{/login}">Log in</a>
+            </p>
+        </div>
+    </div>
+</main>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>
