@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -50,6 +51,7 @@ class AuthControllerTest {
     @Test
     void postRegister_shouldRedirectAfterRegistrationToLogin() throws Exception {
         mockMvc.perform(post("/register")
+                        .with(csrf())
                         .param("username", "Ben")
                         .param("password", "password123")
                         .param("email", "ben@test.com")
@@ -59,10 +61,10 @@ class AuthControllerTest {
         verify(userService).register(any());
     }
 
-
     @Test
     void postRegister_invalidEmailShowsFormWithError() throws Exception {
         mockMvc.perform(post("/register")
+                        .with(csrf())
                         .param("username", "Ben")
                         .param("password", "password123")
                         .param("email", "ben")
@@ -74,6 +76,7 @@ class AuthControllerTest {
     @Test
     void postRegister_invalidPasswordShowsFormWithError() throws Exception {
         mockMvc.perform(post("/register")
+                        .with(csrf())
                         .param("username", "Ben")
                         .param("password", "123")
                         .param("email", "ben@test.com")
@@ -85,6 +88,7 @@ class AuthControllerTest {
     @Test
     void postRegister_invalidDataDoesntCallService() throws Exception {
         mockMvc.perform(post("/register")
+                        .with(csrf())
                         .param("username", "")
                         .param("password", "password123")
                         .param("email", "ben@test.com")
@@ -98,6 +102,7 @@ class AuthControllerTest {
     void postRegister_takenUsernameShowsFormWithError() throws Exception {
         when(userService.register(any())).thenThrow(new BusinessRuleException("Username already taken"));
         mockMvc.perform(post("/register")
+                        .with(csrf())
                         .param("username", "Ben")
                         .param("password", "password123")
                         .param("email", "ben@test.com")
