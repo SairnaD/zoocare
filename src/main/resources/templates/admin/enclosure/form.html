@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${enclosureId == null} ? 'New enclosure' : 'Edit enclosure')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-sm-10 col-md-8 col-lg-6">
+            <h1 class="h3 mb-4" th:text="${enclosureId == null} ? 'New enclosure' : 'Edit enclosure'">New enclosure</h1>
+
+            <form th:action="${enclosureId == null} ? @{/admin/enclosures} : @{/admin/enclosures/{id}(id=${enclosureId})}"
+                  th:object="${enclosureRequest}" method="post" novalidate>
+
+                <div class="mb-3">
+                    <label for="name" class="form-label">Name</label>
+                    <input type="text" th:field="*{name}" th:errorclass="is-invalid" class="form-control">
+                    <div th:if="${#fields.hasErrors('name')}" th:errors="*{name}"
+                         class="invalid-feedback">Name error</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="habitatType" class="form-label">Habitat</label>
+                    <select th:field="*{habitatType}" th:errorclass="is-invalid" class="form-select">
+                        <option value="">Choose habitat...</option>
+                        <option th:each="habitat : ${habitatTypes}"
+                                th:value="${habitat}" th:text="${habitat}">SAVANNA</option>
+                    </select>
+                    <div th:if="${#fields.hasErrors('habitatType')}" th:errors="*{habitatType}"
+                         class="invalid-feedback">Habitat error</div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="capacity" class="form-label">Capacity</label>
+                    <input type="number" min="1" th:field="*{capacity}" th:errorclass="is-invalid"
+                           class="form-control">
+                    <div class="form-text">Maximum number of animals in this enclosure.</div>
+                    <div th:if="${#fields.hasErrors('capacity')}" th:errors="*{capacity}"
+                         class="invalid-feedback">Capacity error</div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-success">Save</button>
+                    <a th:href="@{/admin/enclosures}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>
