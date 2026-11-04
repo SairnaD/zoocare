@@ -2,16 +2,26 @@ package com.zoo.care.service;
 
 import com.zoo.care.dto.EnclosureRequest;
 import com.zoo.care.dto.EnclosureResponse;
+import com.zoo.care.dto.KeeperAssignmentResponse;
 import com.zoo.care.entity.Enclosure;
+import com.zoo.care.entity.KeeperAssignment;
 import com.zoo.care.exception.BusinessRuleException;
 import com.zoo.care.exception.ResourceNotFoundException;
 import com.zoo.care.repository.EnclosureRepository;
+import com.zoo.care.repository.KeeperAssignmentRepository;
+import com.zoo.care.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.zoo.care.entity.User;
+import com.zoo.care.entity.Role;
+
+
+import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 
 @Slf4j
@@ -19,6 +29,10 @@ import java.util.List;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class EnclosureService {
+
+    private final UserRepository userRepository;
+    private final KeeperAssignmentRepository keeperAssignmentRepository;
+    private final Clock clock;
 
     private final EnclosureRepository enclosureRepository;
 
@@ -73,6 +87,75 @@ public class EnclosureService {
         return enclosureRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Enclosure", id));
     }
+
+
+    private User getKeeper(Long keeperId) {
+        User keeper = userRepository.findById(keeperId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("User", keeperId));
+
+        if (keeper.getRole() != Role.KEEPER) {
+            throw new BusinessRuleException(
+                    "Only users with role KEEPER can be assigned to an enclosure"
+            );
+        }
+
+        return keeper;
+    }
+
+    @Transactional
+    public KeeperAssignmentResponse assignKeeper(Long enclosureId, Long keeperId) {
+        if (enclosureId == null || enclosureId <= 0) {
+            throw new BusinessRuleException(
+                    "Enclosure ID must be positive"
+            );
+        }
+
+        if (keeperId == null || keeperId <= 0) {
+            throw new BusinessRuleException(
+                    "Keeper ID must be positive"
+            );
+        }
+
+        Enclosure enclosure = getEnclosure(enclosureId);
+        User keeper = getKeeper(keeperId);
+
+        Instant now = Instant.now(clock);
+
+        boolean alreadyAssigned =
+                keeperAssignmentRepository.existsActiveAssignment(
+                        enclosureId,
+                        keeperId,
+                        now
+                );
+
+        if (alreadyAssigned) {
+            throw new BusinessRuleException(
+                    "Keeper is already assigned to this enclosure"
+            );
+        }
+
+        KeeperAssignment assignment = KeeperAssignment.builder()
+                .enclosure(enclosure)
+                .keeper(keeper)
+                .startsAt(now)
+                .endsAt(null)
+                .createdAt(now)
+                .build();
+
+        KeeperAssignment saved =
+                keeperAssignmentRepository.save(assignment);
+
+        log.info(
+                "Created keeper assignment id={} for enclosure id={} and keeper id={}",
+                saved.getId(),
+                enclosureId,
+                keeperId
+        );
+
+        return KeeperAssignmentResponse.from(saved);
+    }
+
 
     private BusinessRuleException duplicateName(String name) {
         return new BusinessRuleException("Enclosure with name '" + name + "' already exists");

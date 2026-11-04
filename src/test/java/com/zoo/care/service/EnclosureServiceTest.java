@@ -107,6 +107,8 @@ class EnclosureServiceTest {
         verify(enclosureRepository, never()).delete(any());
     }
 
+
+
     private EnclosureRequest savannaRequest(String name) {
         return new EnclosureRequest(name, HabitatType.SAVANNA, 3);
     }

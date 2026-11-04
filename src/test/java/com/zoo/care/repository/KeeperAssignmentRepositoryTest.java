@@ -25,6 +25,68 @@ public class KeeperAssignmentRepositoryTest {
     private KeeperAssignmentRepository repository;
 
     @Test
+    @DisplayName("Assignment for another enclosure is not considered active")
+    void existsActiveAssignment_forAnotherEnclosure_returnsFalse() {
+        AssignmentIds ids = persistAssignment(
+                Instant.parse("2026-11-04T08:00:00Z"),
+                Instant.parse("2026-11-04T16:00:00Z")
+        );
+
+        Enclosure anotherEnclosure = Enclosure.builder()
+                .name("Another Savanna")
+                .habitatType(HabitatType.SAVANNA)
+                .capacity(5)
+                .build();
+
+        entityManager.persist(anotherEnclosure);
+        entityManager.flush();
+
+        Long anotherEnclosureId = anotherEnclosure.getId();
+
+        entityManager.clear();
+
+        boolean result = repository.existsActiveAssignment(
+                anotherEnclosureId,
+                ids.keeperId(),
+                Instant.parse("2026-11-04T12:00:00Z")
+        );
+
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    @DisplayName("Assignment for another keeper is not considered active")
+    void existsActiveAssignment_forAnotherKeeper_returnsFalse() {
+        AssignmentIds ids = persistAssignment(
+                Instant.parse("2026-11-04T08:00:00Z"),
+                Instant.parse("2026-11-04T16:00:00Z")
+        );
+
+        User anotherKeeper = User.builder()
+                .username("another-keeper")
+                .password("test-password-hash")
+                .email("another-keeper@example.com")
+                .fullName("Another Keeper")
+                .role(Role.KEEPER)
+                .build();
+
+        entityManager.persist(anotherKeeper);
+        entityManager.flush();
+
+        Long anotherKeeperId = anotherKeeper.getId();
+
+        entityManager.clear();
+
+        boolean result = repository.existsActiveAssignment(
+                ids.enclosureId(),
+                anotherKeeperId,
+                Instant.parse("2026-11-04T12:00:00Z")
+        );
+
+        assertThat(result).isFalse();
+    }
+
+    @Test
     @DisplayName("Assignment without an end time is inactive before its start")
     void existsActiveAssignment_beforeStartWithoutEnd_returnsFalse() {
         AssignmentIds ids = persistAssignment(
