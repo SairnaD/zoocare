@@ -1,0 +1,40 @@
+package com.zoo.care.dto;
+
+import com.zoo.care.entity.Animal;
+
+import java.time.Duration;
+import java.time.LocalDate;
+
+public record AnimalResponse(
+        Long id,
+        String name,
+        Long speciesId,
+        String speciesName,
+        Long enclosureId,
+        String enclosureName,
+        LocalDate birthDate,
+        Float weight,
+        Integer size,
+        Duration feedingInterval,
+        String description,
+        String photo,
+        String healthStatus
+) {
+    public static AnimalResponse from(Animal animal) {
+        return new AnimalResponse(
+                animal.getId(),
+                animal.getName(),
+                animal.getSpecies().getId(),
+                animal.getSpecies().getName(),
+                animal.getEnclosure().getId(),
+                animal.getEnclosure().getName(),
+                animal.getBirthdate(),
+                animal.getWeight(),
+                animal.getSize(),
+                animal.getFeedingInterval(),
+                animal.getDescription(),
+                animal.getPhoto(),
+                animal.getHealthStatus().name()
+        );
+    }
+}
