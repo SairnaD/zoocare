@@ -40,6 +40,67 @@ public class EnclosureService {
     private final EnclosureRepository enclosureRepository;
     private final AnimalRepository animalRepository;
 
+    private KeeperAssignment getAssignment(Long enclosureId, Long assignmentId) {
+        KeeperAssignment assignment = keeperAssignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("KeeperAssignment", assignmentId));
+
+        if (!assignment.getEnclosure().getId().equals(enclosureId)) {
+            throw new ResourceNotFoundException("KeeperAssignment", assignmentId);
+        }
+
+        return assignment;
+    }
+
+
+    private void validateActiveAssignment(KeeperAssignment assignment, Instant now) {
+        if (assignment.getStartsAt().isAfter(now)
+                || (assignment.getEndsAt() != null
+                && !assignment.getEndsAt().isAfter(now))) {
+            throw new BusinessRuleException("Keeper assignment is not active");
+        }
+    }
+
+    @Transactional
+    public KeeperAssignmentResponse switchKeeper(
+            Long enclosureId,
+            Long assignmentId,
+            Long newKeeperId) {
+
+        Enclosure enclosure = getEnclosure(enclosureId);
+        KeeperAssignment oldAssignment = getAssignment(enclosureId, assignmentId);
+
+        Instant now = Instant.now(clock);
+        validateActiveAssignment(oldAssignment, now);
+
+        User newKeeper = getKeeper(newKeeperId);
+
+        if (oldAssignment.getKeeper().getId().equals(newKeeperId)) {
+            throw new BusinessRuleException(
+                    "New keeper must be different from the current keeper");
+        }
+
+        if (keeperAssignmentRepository.existsActiveAssignment(
+                enclosureId, newKeeperId, now)) {
+            throw new BusinessRuleException(
+                    "Keeper is already assigned to this enclosure");
+        }
+
+        oldAssignment.setEndsAt(now);
+
+        KeeperAssignment saved = keeperAssignmentRepository.save(
+                KeeperAssignment.builder()
+                        .enclosure(enclosure)
+                        .keeper(newKeeper)
+                        .startsAt(now)
+                        .endsAt(null)
+                        .createdAt(now)
+                        .build());
+
+        return KeeperAssignmentResponse.from(saved);
+    }
+
+
+
     public List<EnclosureResponse> findAll() {
         return enclosureRepository.findAll(Sort.by("name")).stream()
                 .map(EnclosureResponse::from)

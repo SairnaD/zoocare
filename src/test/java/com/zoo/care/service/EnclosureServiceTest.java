@@ -30,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import org.mockito.ArgumentCaptor;
 
 @ExtendWith(MockitoExtension.class)
 class EnclosureServiceTest {
@@ -57,6 +58,114 @@ class EnclosureServiceTest {
 
     @InjectMocks
     private EnclosureService enclosureService;
+
+
+    @Test
+    void switchKeeper_sameKeeper_rejectsWithoutChangingAssignment() {
+        Enclosure enclosure = existingSavanna();
+        User oldKeeper = keeper();
+        Instant originalStart = NOW.minusSeconds(3600);
+
+        KeeperAssignment oldAssignment = KeeperAssignment.builder()
+                .id(10L)
+                .enclosure(enclosure)
+                .keeper(oldKeeper)
+                .startsAt(originalStart)
+                .createdAt(originalStart)
+                .endsAt(null)
+                .build();
+
+        when(enclosureRepository.findById(1L))
+                .thenReturn(Optional.of(enclosure));
+        when(keeperAssignmentRepository.findById(10L))
+                .thenReturn(Optional.of(oldAssignment));
+        when(userRepository.findById(7L))
+                .thenReturn(Optional.of(oldKeeper));
+
+        assertThatThrownBy(() ->
+                enclosureService.switchKeeper(1L, 10L, 7L))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("New keeper must be different from the current keeper");
+
+        assertThat(oldAssignment.getEndsAt()).isNull();
+        assertThat(oldAssignment.getKeeper()).isSameAs(oldKeeper);
+        assertThat(oldAssignment.getEnclosure()).isSameAs(enclosure);
+        assertThat(oldAssignment.getStartsAt()).isEqualTo(originalStart);
+        assertThat(oldAssignment.getCreatedAt()).isEqualTo(originalStart);
+
+        verify(keeperAssignmentRepository, never()).save(any());
+    }
+
+
+    @Test
+    void switchKeeper_closesOldAssignmentAndCreatesNewOne() {
+        Enclosure enclosure = existingSavanna();
+        User oldKeeper = keeper();
+
+        User newKeeper = User.builder()
+                .id(8L)
+                .username("amy")
+                .fullName("Amy Adams")
+                .role(Role.KEEPER)
+                .build();
+
+        Instant originalStart = NOW.minusSeconds(3600);
+
+        KeeperAssignment oldAssignment = KeeperAssignment.builder()
+                .id(10L)
+                .enclosure(enclosure)
+                .keeper(oldKeeper)
+                .startsAt(originalStart)
+                .createdAt(originalStart)
+                .endsAt(null)
+                .build();
+
+        when(enclosureRepository.findById(1L))
+                .thenReturn(Optional.of(enclosure));
+        when(keeperAssignmentRepository.findById(10L))
+                .thenReturn(Optional.of(oldAssignment));
+        when(userRepository.findById(8L))
+                .thenReturn(Optional.of(newKeeper));
+        when(keeperAssignmentRepository.existsActiveAssignment(1L, 8L, NOW))
+                .thenReturn(false);
+        when(keeperAssignmentRepository.save(any(KeeperAssignment.class)))
+                .thenAnswer(invocation -> {
+                    KeeperAssignment assignment = invocation.getArgument(0);
+                    assignment.setId(11L);
+                    return assignment;
+                });
+
+        KeeperAssignmentResponse response =
+                enclosureService.switchKeeper(1L, 10L, 8L);
+
+        assertThat(oldAssignment.getEndsAt()).isEqualTo(NOW);
+        assertThat(oldAssignment.getKeeper()).isSameAs(oldKeeper);
+        assertThat(oldAssignment.getStartsAt()).isEqualTo(originalStart);
+        assertThat(oldAssignment.getCreatedAt()).isEqualTo(originalStart);
+
+        ArgumentCaptor<KeeperAssignment> captor =
+                ArgumentCaptor.forClass(KeeperAssignment.class);
+
+        verify(keeperAssignmentRepository).save(captor.capture());
+
+        KeeperAssignment newAssignment = captor.getValue();
+
+        assertThat(newAssignment).isNotSameAs(oldAssignment);
+        assertThat(newAssignment.getEnclosure()).isSameAs(enclosure);
+        assertThat(newAssignment.getKeeper()).isSameAs(newKeeper);
+        assertThat(newAssignment.getStartsAt()).isEqualTo(NOW);
+        assertThat(newAssignment.getCreatedAt()).isEqualTo(NOW);
+        assertThat(newAssignment.getEndsAt()).isNull();
+
+        assertThat(response.id()).isEqualTo(11L);
+        assertThat(response.enclosureId()).isEqualTo(1L);
+        assertThat(response.keeperId()).isEqualTo(8L);
+        assertThat(response.keeperName()).isEqualTo("Amy Adams");
+        assertThat(response.startsAt()).isEqualTo(NOW);
+        assertThat(response.createdAt()).isEqualTo(NOW);
+        assertThat(response.endsAt()).isNull();
+    }
+
 
     @Test
     void create_trimsNameAndSavesEnclosure() {
