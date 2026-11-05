@@ -6,6 +6,7 @@ import com.zoo.care.service.AnimalService;
 import com.zoo.care.service.EnclosureService;
 import com.zoo.care.service.FileStorageService;
 import com.zoo.care.service.SpeciesService;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -32,6 +33,7 @@ public class AnimalPageController {
     private final SpeciesService speciesService;
     private final EnclosureService enclosureService;
     private final FileStorageService fileStorageService;
+    private final HttpSession httpSession;
 
     @GetMapping
     public String list(Model model) {
@@ -41,6 +43,9 @@ public class AnimalPageController {
 
     @GetMapping("/new")
     public String newForm(Model model) {
+        // Start with a clean form: drop a photo left over from an abandoned attempt
+        fileStorageService.delete((String) httpSession.getAttribute("pendingPhoto"));
+        httpSession.removeAttribute("pendingPhoto");
         model.addAttribute("animalRequest",
                 new AnimalRequest(null, null, null, null, null, null, null, null, null));
         populateOptions(model);
@@ -56,15 +61,29 @@ public class AnimalPageController {
         if (photoError != null) {
             bindingResult.rejectValue("photo", "invalid", photoError);
         }
+        // Browsers can't refill file inputs after a failed submit, so a valid photo
+        // is stored right away and kept in the session for the next attempt.
+        // A newly chosen photo replaces the one from the previous attempt.
+        if (request.photo() != null && !request.photo().isEmpty() && photoError == null) {
+            // The previous pending photo is deleted when a new one replaces it.
+            fileStorageService.delete((String) httpSession.getAttribute("pendingPhoto"));
+            httpSession.setAttribute("pendingPhoto", fileStorageService.store(request.photo()));
+        }
+        // The new photo, the one kept from a previous attempt or null
+        String photoFile = (String) httpSession.getAttribute("pendingPhoto");
         if (bindingResult.hasErrors()) {
             populateOptions(model);
+            model.addAttribute("pendingPhoto", photoFile);
             return FORM_VIEW;
         }
         try {
-            animalService.create(request);
+            animalService.create(request, photoFile);
+            // The photo now belongs to the saved animal, so it must not carry over to the next one
+            httpSession.removeAttribute("pendingPhoto");
         } catch (BusinessRuleException ex) {
             bindingResult.reject("business", ex.getMessage());
             populateOptions(model);
+            model.addAttribute("pendingPhoto", photoFile);
             return FORM_VIEW;
         }
         redirectAttributes.addFlashAttribute("successMessage", "Animal registered");

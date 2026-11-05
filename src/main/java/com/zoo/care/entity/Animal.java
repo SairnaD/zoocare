@@ -45,7 +45,7 @@ public class Animal {
     @Column(length = 500)
     private String description;
 
-    @Column(nullable = false)
+    @Column
     private String photo; // stored file name, served from /photos/{name}
 
     @Enumerated(EnumType.STRING)

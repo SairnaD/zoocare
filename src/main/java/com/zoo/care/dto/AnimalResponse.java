@@ -19,6 +19,7 @@ public record AnimalResponse(
         String photo,
         String healthStatus
 ) {
+    public static final String DEFAULT_PHOTO_URL = "/images/no-photo.svg";
     public static AnimalResponse from(Animal animal) {
         return new AnimalResponse(
                 animal.getId(),
@@ -35,5 +36,8 @@ public record AnimalResponse(
                 animal.getPhoto(),
                 animal.getHealthStatus().name()
         );
+    }
+    public String photoUrl() {
+        return (photo == null || photo.isEmpty()) ? DEFAULT_PHOTO_URL : "/photos/" + photo;
     }
 }

@@ -26,17 +26,12 @@
     import static org.junit.jupiter.api.Assertions.assertFalse;
     import static org.junit.jupiter.api.Assertions.assertNotNull;
     import static org.mockito.ArgumentMatchers.any;
-    import static org.mockito.Mockito.verify;
-    import static org.mockito.Mockito.verifyNoInteractions;
-    import static org.mockito.Mockito.when;
+    import static org.mockito.ArgumentMatchers.eq;
+    import static org.mockito.Mockito.*;
     import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
     import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
     import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
-    import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
-    import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
-    import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
-    import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-    import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
+    import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
     @WebMvcTest(controllers = AnimalPageController.class,
             excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = WebConfig.class))
@@ -118,7 +113,7 @@
                     .andExpect(redirectedUrl("/admin/animals"))
                     .andExpect(flash().attribute("successMessage", "Animal registered"));
 
-            verify(animalService).create(any());
+            verify(animalService).create(any(),any());
         }
 
         @Test
@@ -154,7 +149,7 @@
         @Test
         @WithMockUser(roles = "ADMIN")
         void create_businessRuleViolation_showsGlobalErrorNotNameError() throws Exception {
-            when(animalService.create(any()))
+            when(animalService.create(any(),any()))
                     .thenThrow(new BusinessRuleException("Enclosure 'Savannah' is full"));
 
             mockMvc.perform(validPost())
@@ -196,5 +191,144 @@
             mockMvc.perform(get("/admin/animals"))
                     .andExpect(status().is3xxRedirection())
                     .andExpect(redirectedUrl("/login"));
+        }
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        void newForm_clearsPhotoLeftFromPreviousAttempt() throws Exception {
+            mockMvc.perform(get("/admin/animals/new").sessionAttr("pendingPhoto", "old.png"))
+                    .andExpect(status().isOk())
+                    .andExpect(request().sessionAttributeDoesNotExist("pendingPhoto"));
+        }
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        void create_validPost_storesPhotoAndClearsSession() throws Exception {
+            when(fileStorageService.store(any())).thenReturn("abc.png");
+
+            mockMvc.perform(validPost())
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(request().sessionAttributeDoesNotExist("pendingPhoto"));
+
+            verify(animalService).create(any(), eq("abc.png"));
+        }
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        void create_withoutPhoto_passesNullToService() throws Exception {
+            mockMvc.perform(multipart("/admin/animals")
+                            .with(csrf())
+                            .param("name", "Leo")
+                            .param("speciesId", "1")
+                            .param("enclosureId", "2")
+                            .param("birthDate", "2020-05-01")
+                            .param("weight", "180.5")
+                            .param("size", "120")
+                            .param("feedingIntervalHours", "6"))
+                    .andExpect(status().is3xxRedirection());
+
+            verify(animalService).create(any(), isNull());
+            verify(fileStorageService, never()).store(any());
+        }
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        void create_withoutNewPhoto_usesPhotoFromPreviousAttempt() throws Exception {
+            mockMvc.perform(multipart("/admin/animals")
+                            .sessionAttr("pendingPhoto", "abc.png")
+                            .with(csrf())
+                            .param("name", "Leo")
+                            .param("speciesId", "1")
+                            .param("enclosureId", "2")
+                            .param("birthDate", "2020-05-01")
+                            .param("weight", "180.5")
+                            .param("size", "120")
+                            .param("feedingIntervalHours", "6"))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(request().sessionAttributeDoesNotExist("pendingPhoto"));
+
+            verify(animalService).create(any(), eq("abc.png"));
+            verify(fileStorageService, never()).store(any());
+        }
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        void create_invalidPost_keepsValidPhotoForNextAttempt() throws Exception {
+            when(fileStorageService.store(any())).thenReturn("abc.png");
+
+            mockMvc.perform(multipart("/admin/animals")
+                            .file(PHOTO)
+                            .with(csrf())
+                            .param("name", "a")) // too short, everything else is missing
+                    .andExpect(status().isOk())
+                    .andExpect(view().name("admin/animals/form"))
+                    .andExpect(model().attribute("pendingPhoto", "abc.png"))
+                    .andExpect(request().sessionAttribute("pendingPhoto", "abc.png"));
+
+            verifyNoInteractions(animalService);
+        }
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        void create_businessRuleViolation_keepsPhotoForNextAttempt() throws Exception {
+            when(fileStorageService.store(any())).thenReturn("abc.png");
+            when(animalService.create(any(), any()))
+                    .thenThrow(new BusinessRuleException("Enclosure 'Savannah' is full"));
+
+            mockMvc.perform(validPost())
+                    .andExpect(status().isOk())
+                    .andExpect(view().name("admin/animals/form"))
+                    .andExpect(model().attribute("pendingPhoto", "abc.png"))
+                    .andExpect(request().sessionAttribute("pendingPhoto", "abc.png"));
+        }
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        void create_invalidPhoto_isNotStored() throws Exception {
+            when(fileStorageService.validate(any())).thenReturn("Only JPG, PNG, WebP or GIF images are allowed");
+
+            mockMvc.perform(validPost())
+                    .andExpect(status().isOk())
+                    .andExpect(view().name("admin/animals/form"));
+
+            verify(fileStorageService, never()).store(any());
+            verifyNoInteractions(animalService);
+        }
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        void newForm_deletesPhotoLeftFromPreviousAttempt() throws Exception {
+            mockMvc.perform(get("/admin/animals/new").sessionAttr("pendingPhoto", "old.png"))
+                    .andExpect(status().isOk());
+
+            verify(fileStorageService).delete("old.png");
+        }
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        void create_newPhoto_deletesPreviousPendingPhoto() throws Exception {
+            when(fileStorageService.store(any())).thenReturn("new.png");
+
+            mockMvc.perform(multipart("/admin/animals")
+                            .file(PHOTO)
+                            .sessionAttr("pendingPhoto", "old.png")
+                            .with(csrf())
+                            .param("name", "a")) // invalid, so the form comes back
+                    .andExpect(status().isOk())
+                    .andExpect(request().sessionAttribute("pendingPhoto", "new.png"));
+
+            verify(fileStorageService).delete("old.png");
+        }
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        void create_validPost_doesNotDeletePhotoOfSavedAnimal() throws Exception {
+            when(fileStorageService.store(any())).thenReturn("abc.png");
+
+            mockMvc.perform(validPost())
+                    .andExpect(status().is3xxRedirection());
+
+            verify(animalService).create(any(), eq("abc.png"));
+            verify(fileStorageService, never()).delete("abc.png");
         }
     }

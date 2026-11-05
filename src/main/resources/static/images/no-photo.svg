@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300" role="img" aria-label="No photo">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e8f5ec"/>
+      <stop offset="1" stop-color="#cfe9d8"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#bg)"/>
+  <!-- paw print -->
+  <g fill="#198754">
+    <ellipse cx="200" cy="170" rx="62" ry="52"/>
+    <ellipse cx="132" cy="108" rx="20" ry="27" transform="rotate(-22 132 108)"/>
+    <ellipse cx="174" cy="72"  rx="21" ry="28" transform="rotate(-7 174 72)"/>
+    <ellipse cx="226" cy="72"  rx="21" ry="28" transform="rotate(7 226 72)"/>
+    <ellipse cx="268" cy="108" rx="20" ry="27" transform="rotate(22 268 108)"/>
+  </g>
+  <!-- question mark inside the main pad -->
+  <path d="M182 155 a18 18 0 1 1 27 15.5 c-6.5 4 -9 7.5 -9 15" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="200" cy="203" r="7" fill="#ffffff"/>
+  <text x="200" y="268" text-anchor="middle" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#146c43" letter-spacing="1">NO PHOTO YET</text>
+</svg>

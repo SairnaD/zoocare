@@ -41,10 +41,10 @@ public class FileStorageService {
         return root;
     }
 
-    /** Returns an error message, or null if the file is acceptable. */
+    /** Returns an error message, or null if the file is acceptable (no file is also fine). */
     public String validate(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            return "Please choose an image";
+            return null;
         }
         if (!EXTENSIONS.containsKey(file.getContentType())) {
             return "Only JPG, PNG, WebP or GIF images are allowed";
@@ -54,6 +54,9 @@ public class FileStorageService {
 
     /** Saves the file under a generated name and returns that file name. */
     public String store(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("No file to store");
+        }
         String error = validate(file);
         if (error != null) {
             throw new IllegalArgumentException(error);
@@ -66,5 +69,16 @@ public class FileStorageService {
             throw new UncheckedIOException("Could not store photo", e);
         }
         return filename;
+    }
+
+    /** Deletes a stored photo; failures are only logged so they never break the request. */
+    public void delete(String name) {
+        if (name != null && !name.isBlank()) {
+            try {
+                Files.deleteIfExists(root.resolve(name));
+            } catch (IOException e) {
+                log.warn("Could not delete photo {}", name, e);
+            }
+        }
     }
 }

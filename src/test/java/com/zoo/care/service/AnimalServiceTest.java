@@ -28,11 +28,11 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -44,8 +44,6 @@ class AnimalServiceTest {
     SpeciesRepository speciesRepository;
     @Mock
     EnclosureRepository enclosureRepository;
-    @Mock
-    FileStorageService fileStorageService;
 
     @InjectMocks
     AnimalService animalService;
@@ -90,13 +88,12 @@ class AnimalServiceTest {
     }
 
     @Test
-    void create_duplicateName_throwsAndStoresNothing() {
+    void create_duplicateName_throwsAndSavesNothing() {
         when(animalRepository.existsByNameIgnoreCase("Leo")).thenReturn(true);
 
-        assertThrows(BusinessRuleException.class, () -> animalService.create(request()));
+        assertThrows(BusinessRuleException.class, () -> animalService.create(request(), null));
 
         verify(animalRepository, never()).save(any());
-        verifyNoInteractions(fileStorageService);
     }
 
     @Test
@@ -104,9 +101,9 @@ class AnimalServiceTest {
         when(animalRepository.existsByNameIgnoreCase("Leo")).thenReturn(false);
         when(speciesRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> animalService.create(request()));
+        assertThrows(ResourceNotFoundException.class, () -> animalService.create(request(), null));
 
-        verifyNoInteractions(fileStorageService);
+        verify(animalRepository, never()).save(any());
     }
 
     @Test
@@ -115,36 +112,34 @@ class AnimalServiceTest {
         when(speciesRepository.findById(1L)).thenReturn(Optional.of(lion()));
         when(enclosureRepository.findById(2L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> animalService.create(request()));
+        assertThrows(ResourceNotFoundException.class, () -> animalService.create(request(), null));
 
-        verifyNoInteractions(fileStorageService);
+        verify(animalRepository, never()).save(any());
     }
 
     @Test
-    void create_habitatMismatch_throwsAndStoresNothing() {
+    void create_habitatMismatch_throwsAndSavesNothing() {
         when(animalRepository.existsByNameIgnoreCase("Leo")).thenReturn(false);
         when(speciesRepository.findById(1L)).thenReturn(Optional.of(lion()));
         when(enclosureRepository.findById(2L)).thenReturn(Optional.of(savanna(HabitatType.ARCTIC)));
 
-        assertThrows(BusinessRuleException.class, () -> animalService.create(request()));
+        assertThrows(BusinessRuleException.class, () -> animalService.create(request(), null));
 
         verify(animalRepository, never()).save(any());
-        verifyNoInteractions(fileStorageService);
     }
 
     @Test
-    void create_fullEnclosure_throwsAndStoresNothing() {
+    void create_fullEnclosure_throwsAndSavesNothing() {
         when(animalRepository.existsByNameIgnoreCase("Leo")).thenReturn(false);
         when(speciesRepository.findById(1L)).thenReturn(Optional.of(lion()));
         when(enclosureRepository.findById(2L)).thenReturn(Optional.of(savanna(HabitatType.SAVANNA)));
         when(animalRepository.countByEnclosureId(2L)).thenReturn(2L); // capacity is 2
 
         BusinessRuleException e = assertThrows(BusinessRuleException.class,
-                () -> animalService.create(request()));
+                () -> animalService.create(request(), null));
 
         assertEquals("Enclosure 'Savannah' is full", e.getMessage());
         verify(animalRepository, never()).save(any());
-        verifyNoInteractions(fileStorageService);
     }
 
     @Test
@@ -153,26 +148,24 @@ class AnimalServiceTest {
         when(speciesRepository.findById(1L)).thenReturn(Optional.of(lion()));
         when(enclosureRepository.findById(2L)).thenReturn(Optional.of(savanna(HabitatType.SAVANNA)));
         when(animalRepository.countByEnclosureId(2L)).thenReturn(1L); // capacity 2, one place left
-        when(fileStorageService.store(photo)).thenReturn("abc.png");
         when(animalRepository.save(any(Animal.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        AnimalResponse response = animalService.create(request());
+        AnimalResponse response = animalService.create(request(), null);
 
         assertEquals("Leo", response.name());
     }
 
     @Test
-    void create_valid_savesAnimalWithTrimmedNameHoursAndStoredPhoto() {
+    void create_valid_savesAnimalWithTrimmedNameHoursAndPhoto() {
         Species species = lion();
         Enclosure enclosure = savanna(HabitatType.SAVANNA);
         when(animalRepository.existsByNameIgnoreCase("Leo")).thenReturn(false);
         when(speciesRepository.findById(1L)).thenReturn(Optional.of(species));
         when(enclosureRepository.findById(2L)).thenReturn(Optional.of(enclosure));
         when(animalRepository.countByEnclosureId(2L)).thenReturn(0L);
-        when(fileStorageService.store(photo)).thenReturn("abc.png");
         when(animalRepository.save(any(Animal.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        animalService.create(request());
+        animalService.create(request(), "abc.png");
 
         ArgumentCaptor<Animal> captor = ArgumentCaptor.forClass(Animal.class);
         verify(animalRepository).save(captor.capture());
@@ -183,5 +176,20 @@ class AnimalServiceTest {
         assertEquals(6, saved.getFeedingIntervalHours());
         assertEquals("abc.png", saved.getPhoto());
         assertEquals(HealthStatus.HEALTHY, saved.getHealthStatus());
+    }
+
+    @Test
+    void create_withoutPhoto_savesAnimalWithNullPhoto() {
+        when(animalRepository.existsByNameIgnoreCase("Leo")).thenReturn(false);
+        when(speciesRepository.findById(1L)).thenReturn(Optional.of(lion()));
+        when(enclosureRepository.findById(2L)).thenReturn(Optional.of(savanna(HabitatType.SAVANNA)));
+        when(animalRepository.countByEnclosureId(2L)).thenReturn(0L);
+        when(animalRepository.save(any(Animal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        animalService.create(request(), null);
+
+        ArgumentCaptor<Animal> captor = ArgumentCaptor.forClass(Animal.class);
+        verify(animalRepository).save(captor.capture());
+        assertNull(captor.getValue().getPhoto());
     }
 }

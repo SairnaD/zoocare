@@ -11,8 +11,8 @@
             <div class="card">
                 <div class="row g-0">
                     <div class="col-md-5">
-                        <img th:if="${animal.photo() != null}" th:src="@{/photos/{f}(f=${animal.photo()})}"
-                             th:alt="${animal.name()}" class="img-fluid rounded-start w-100">
+                        <img th:src="@{${animal.photoUrl()}}"
+                             th:alt="${animal.name()}" class="img-fluid rounded-start w-100 h-100 object-fit-cover">
                     </div>
                     <div class="col-md-7">
                         <div class="card-body">
