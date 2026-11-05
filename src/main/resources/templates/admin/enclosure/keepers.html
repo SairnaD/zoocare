@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Enclosure keepers')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            <h1 class="h3 mb-4">Keepers of <span th:text="${enclosure.name()}">Savanna 1</span></h1>
+
+            <div th:if="${successMessage}" th:text="${successMessage}" class="alert alert-success">Saved</div>
+
+            <p th:if="${#lists.isEmpty(assignments)}" class="text-muted">No keepers assigned yet.</p>
+            <ul th:unless="${#lists.isEmpty(assignments)}" class="list-group mb-4">
+                <li th:each="assignment : ${assignments}"
+                    class="list-group-item d-flex justify-content-between align-items-center">
+                    <span th:text="${assignment.keeperName()}">Ben Ten</span>
+                    <form th:action="@{/admin/enclosures/{id}/keepers/{keeperId}/remove(id=${enclosure.id()}, keeperId=${assignment.keeperId()})}"
+                          method="post">
+                        <button type="submit" class="btn btn-outline-danger btn-sm">Remove</button>
+                    </form>
+                </li>
+            </ul>
+
+            <p th:if="${#lists.isEmpty(allKeepers)}" class="text-muted">No keepers are registered yet.</p>
+
+            <form th:unless="${#lists.isEmpty(allKeepers)}"
+                  th:action="@{/admin/enclosures/{id}/keepers(id=${enclosure.id()})}"
+                  th:object="${keeperAssignmentRequest}" method="post" novalidate>
+
+                <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger">
+                    <p th:each="error : ${#fields.globalErrors()}" th:text="${error}" class="mb-0">Error</p>
+                </div>
+
+                <div class="mb-3">
+                    <label for="keeperId" class="form-label">Assign keeper</label>
+                    <select th:field="*{keeperId}" th:errorclass="is-invalid" class="form-select">
+                        <option value="">Choose keeper...</option>
+                        <option th:each="keeper : ${allKeepers}" th:value="${keeper.id()}"
+                                th:text="|${keeper.fullName()} (${keeper.username()})|">Ben Ten (ben)</option>
+                    </select>
+                    <div th:if="${#fields.hasErrors('keeperId')}" th:errors="*{keeperId}"
+                         class="invalid-feedback">Keeper error</div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-success">Assign</button>
+                    <a th:href="@{/admin/enclosures}" class="btn btn-outline-secondary">Back</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head th:replace="~{fragments/layout :: head('Home')}"></head>
 <body>
 <nav th:replace="~{fragments/layout :: navbar}"></nav>
@@ -9,9 +9,12 @@
         <div class="col-12 col-md-8 col-lg-6 text-center">
             <h1 class="display-5 mb-3">Welcome to ZooCare</h1>
 
-            <div class="d-flex justify-content-center gap-2">
+            <div sec:authorize="isAnonymous()" class="d-flex justify-content-center gap-2">
                 <a th:href="@{/login}" class="btn btn-success">Log in</a>
                 <a th:href="@{/register}" class="btn btn-outline-success">Register</a>
+            </div>
+            <div sec:authorize="isAuthenticated()">
+                <a th:href="@{/dashboard}" class="btn btn-success">Go to dashboard</a>
             </div>
         </div>
     </div>

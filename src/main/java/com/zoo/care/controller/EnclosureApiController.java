@@ -2,8 +2,12 @@ package com.zoo.care.controller;
 
 import com.zoo.care.dto.EnclosureRequest;
 import com.zoo.care.dto.EnclosureResponse;
+import com.zoo.care.exception.ErrorResponse;
 import com.zoo.care.service.EnclosureService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,16 +36,6 @@ public class EnclosureApiController {
 
     private final EnclosureService enclosureService;
 
-    @Operation(summary = "Assign a keeper to an enclosure")
-    @PostMapping("/{id}/keepers")
-    @ResponseStatus(HttpStatus.CREATED)
-    public KeeperAssignmentResponse assignKeeper(
-            @PathVariable Long id,
-            @Valid @RequestBody KeeperAssignmentRequest request
-    ) {
-        return enclosureService.assignKeeper(id, request.keeperId());
-    }
-
     @Operation(summary = "List all enclosures, sorted by name")
     @GetMapping
     public List<EnclosureResponse> findAll() {
@@ -49,12 +43,18 @@ public class EnclosureApiController {
     }
 
     @Operation(summary = "Get an enclosure by id")
+    @ApiResponse(responseCode = "404", description = "Enclosure not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @GetMapping("/{id}")
     public EnclosureResponse findById(@PathVariable Long id) {
         return enclosureService.findById(id);
     }
 
     @Operation(summary = "Create a new enclosure")
+    @ApiResponse(responseCode = "400", description = "Validation failed",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Name already exists",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public EnclosureResponse create(@Valid @RequestBody EnclosureRequest request) {
@@ -62,15 +62,56 @@ public class EnclosureApiController {
     }
 
     @Operation(summary = "Update an existing enclosure")
+    @ApiResponse(responseCode = "400", description = "Validation failed",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Enclosure not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Name already exists",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @PutMapping("/{id}")
     public EnclosureResponse update(@PathVariable Long id, @Valid @RequestBody EnclosureRequest request) {
         return enclosureService.update(id, request);
     }
 
     @Operation(summary = "Delete an enclosure")
+    @ApiResponse(responseCode = "404", description = "Enclosure not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Enclosure still has animals",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
         enclosureService.delete(id);
+    }
+
+    @Operation(summary = "List keepers currently assigned to an enclosure")
+    @ApiResponse(responseCode = "404", description = "Enclosure not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @GetMapping("/{id}/keepers")
+    public List<KeeperAssignmentResponse> findKeepers(@PathVariable Long id) {
+        return enclosureService.findActiveKeepers(id);
+    }
+
+    @Operation(summary = "Assign a keeper to an enclosure")
+    @ApiResponse(responseCode = "400", description = "Validation failed",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Enclosure or user not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "User is not a keeper or is already assigned",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @PostMapping("/{id}/keepers")
+    @ResponseStatus(HttpStatus.CREATED)
+    public KeeperAssignmentResponse assignKeeper(@PathVariable Long id,
+                                                 @Valid @RequestBody KeeperAssignmentRequest request) {
+        return enclosureService.assignKeeper(id, request.keeperId());
+    }
+
+    @Operation(summary = "Remove a keeper from an enclosure")
+    @ApiResponse(responseCode = "404", description = "Enclosure not found or keeper is not assigned",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @DeleteMapping("/{id}/keepers/{keeperId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void unassignKeeper(@PathVariable Long id, @PathVariable Long keeperId) {
+        enclosureService.unassignKeeper(id, keeperId);
     }
 }

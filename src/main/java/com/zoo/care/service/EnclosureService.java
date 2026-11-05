@@ -3,15 +3,18 @@ package com.zoo.care.service;
 import com.zoo.care.dto.EnclosureRequest;
 import com.zoo.care.dto.EnclosureResponse;
 import com.zoo.care.dto.KeeperAssignmentResponse;
+import com.zoo.care.dto.KeeperResponse;
 import com.zoo.care.entity.Enclosure;
 import com.zoo.care.entity.KeeperAssignment;
 import com.zoo.care.exception.BusinessRuleException;
 import com.zoo.care.exception.ResourceNotFoundException;
+import com.zoo.care.repository.AnimalRepository;
 import com.zoo.care.repository.EnclosureRepository;
 import com.zoo.care.repository.KeeperAssignmentRepository;
 import com.zoo.care.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +38,7 @@ public class EnclosureService {
     private final Clock clock;
 
     private final EnclosureRepository enclosureRepository;
+    private final AnimalRepository animalRepository;
 
     public List<EnclosureResponse> findAll() {
         return enclosureRepository.findAll(Sort.by("name")).stream()
@@ -69,6 +73,13 @@ public class EnclosureService {
         if (enclosureRepository.existsByNameIgnoreCaseAndIdNot(name, id)) {
             throw duplicateName(name);
         }
+        if (enclosure.getHabitatType() != request.habitatType()
+                && animalRepository.existsByEnclosureId(id)) {
+            throw new BusinessRuleException("Habitat cannot be changed while the enclosure has animals");
+        }
+        if (animalRepository.countByEnclosureId(id) > request.capacity()) {
+            throw new BusinessRuleException("Capacity cannot be lower than the number of animals in the enclosure");
+        }
         enclosure.setName(name);
         enclosure.setHabitatType(request.habitatType());
         enclosure.setCapacity(request.capacity());
@@ -79,7 +90,14 @@ public class EnclosureService {
     @Transactional
     public void delete(Long id) {
         Enclosure enclosure = getEnclosure(id);
-        enclosureRepository.delete(enclosure);
+        keeperAssignmentRepository.deleteByEnclosureId(id);
+        try {
+            enclosureRepository.delete(enclosure);
+            enclosureRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            log.info("Enclosure id={} cannot be deleted: it still has animals", id);
+            throw new BusinessRuleException("Enclosure still has animals and cannot be deleted");
+        }
         log.info("Deleted enclosure '{}' (id={})", enclosure.getName(), id);
     }
 
@@ -105,55 +123,49 @@ public class EnclosureService {
 
     @Transactional
     public KeeperAssignmentResponse assignKeeper(Long enclosureId, Long keeperId) {
-        if (enclosureId == null || enclosureId <= 0) {
-            throw new BusinessRuleException(
-                    "Enclosure ID must be positive"
-            );
-        }
-
-        if (keeperId == null || keeperId <= 0) {
-            throw new BusinessRuleException(
-                    "Keeper ID must be positive"
-            );
-        }
-
         Enclosure enclosure = getEnclosure(enclosureId);
         User keeper = getKeeper(keeperId);
-
         Instant now = Instant.now(clock);
 
-        boolean alreadyAssigned =
-                keeperAssignmentRepository.existsActiveAssignment(
-                        enclosureId,
-                        keeperId,
-                        now
-                );
-
-        if (alreadyAssigned) {
-            throw new BusinessRuleException(
-                    "Keeper is already assigned to this enclosure"
-            );
+        if (keeperAssignmentRepository.existsActiveAssignment(enclosureId, keeperId, now)) {
+            throw new BusinessRuleException("Keeper is already assigned to this enclosure");
         }
 
-        KeeperAssignment assignment = KeeperAssignment.builder()
+        KeeperAssignment saved = keeperAssignmentRepository.save(KeeperAssignment.builder()
                 .enclosure(enclosure)
                 .keeper(keeper)
                 .startsAt(now)
                 .endsAt(null)
                 .createdAt(now)
-                .build();
-
-        KeeperAssignment saved =
-                keeperAssignmentRepository.save(assignment);
-
-        log.info(
-                "Created keeper assignment id={} for enclosure id={} and keeper id={}",
-                saved.getId(),
-                enclosureId,
-                keeperId
-        );
-
+                .build());
+        log.info("Created keeper assignment id={} for enclosure id={} and keeper id={}",
+                saved.getId(), enclosureId, keeperId);
         return KeeperAssignmentResponse.from(saved);
+    }
+
+    @Transactional
+    public void unassignKeeper(Long enclosureId, Long keeperId) {
+        getEnclosure(enclosureId);
+        Instant now = Instant.now(clock);
+        KeeperAssignment assignment = keeperAssignmentRepository.findActive(enclosureId, keeperId, now)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Keeper " + keeperId + " is not assigned to enclosure " + enclosureId));
+        assignment.setEndsAt(now);
+        log.info("Ended keeper assignment id={} (enclosure id={}, keeper id={})",
+                assignment.getId(), enclosureId, keeperId);
+    }
+
+    public List<KeeperAssignmentResponse> findActiveKeepers(Long enclosureId) {
+        getEnclosure(enclosureId);
+        return keeperAssignmentRepository.findActiveByEnclosure(enclosureId, Instant.now(clock)).stream()
+                .map(KeeperAssignmentResponse::from)
+                .toList();
+    }
+
+    public List<KeeperResponse> findAllKeepers() {
+        return userRepository.findAllByRoleOrderByFullNameAsc(Role.KEEPER).stream()
+                .map(KeeperResponse::from)
+                .toList();
     }
 
 

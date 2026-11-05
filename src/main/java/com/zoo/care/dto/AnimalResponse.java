@@ -2,7 +2,6 @@ package com.zoo.care.dto;
 
 import com.zoo.care.entity.Animal;
 
-import java.time.Duration;
 import java.time.LocalDate;
 
 public record AnimalResponse(
@@ -15,7 +14,7 @@ public record AnimalResponse(
         LocalDate birthDate,
         Float weight,
         Integer size,
-        Duration feedingInterval,
+        int feedingInterval,
         String description,
         String photo,
         String healthStatus
@@ -28,10 +27,10 @@ public record AnimalResponse(
                 animal.getSpecies().getName(),
                 animal.getEnclosure().getId(),
                 animal.getEnclosure().getName(),
-                animal.getBirthdate(),
+                animal.getBirthDate(),
                 animal.getWeight(),
                 animal.getSize(),
-                animal.getFeedingInterval(),
+                animal.getFeedingIntervalHours(),
                 animal.getDescription(),
                 animal.getPhoto(),
                 animal.getHealthStatus().name()

@@ -1,10 +1,8 @@
 package com.zoo.care.entity;
 
-
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.Duration;
 import java.time.LocalDate;
 
 @Entity
@@ -15,46 +13,47 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class Animal {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "animal_id")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "species_id")
+    @JoinColumn(name = "species_id", nullable = false)
     private Species species;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "enclosure_id")
+    @JoinColumn(name = "enclosure_id", nullable = false)
     private Enclosure enclosure;
 
     @Column(nullable = false, unique = true, length = 50)
     private String name;
 
-    @Column(nullable = false)
-    private LocalDate birthdate;
+    @Column(name = "birth_date", nullable = false)
+    private LocalDate birthDate;
 
     @Column(nullable = false)
-    private float weight; //assuming KGs with one decimal point for accuracy
+    private float weight; // kg
 
     @Column(nullable = false)
-    private int size; // assuming size measured in CM or MM without decimal places
+    private int size; // cm
 
-    @Column(nullable = false)
-    private Duration feedingInterval; // example - Duration.ofHours(24); for full day
+    @Column(name = "feeding_interval_hours", nullable = false)
+    private int feedingIntervalHours;
 
-    @Column(nullable = false, length = 500)
+    @Column(length = 500)
     private String description;
 
     @Column(nullable = false)
-    private String photo; //file path (ex. "photos/snake.jpg")
+    private String photo; // stored file name, served from /photos/{name}
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
+    @Column(name = "health_status", nullable = false, length = 30)
     private HealthStatus healthStatus;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private DeletedStatus deletedStatus;
-
+    @Column(name = "deleted_status", nullable = false, length = 30)
+    @Builder.Default
+    private DeletedStatus deletedStatus = DeletedStatus.PRESENT;
 }

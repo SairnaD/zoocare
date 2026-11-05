@@ -18,9 +18,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -135,5 +133,94 @@ class EnclosurePageControllerTest {
                 .andExpect(redirectedUrl("/admin/enclosures"))
                 .andExpect(flash().attribute("successMessage", "Enclosure deleted"));
         verify(enclosureService).delete(1L);
+    }
+
+    @Test
+    @WithMockUser(roles = "KEEPER")
+    void list_keeperIsForbidden() throws Exception {
+        mockMvc.perform(get("/admin/enclosures"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void update_invalidForm_showsFormWithErrorsWithoutCallingService() throws Exception {
+        mockMvc.perform(post("/admin/enclosures/1")
+                        .with(csrf())
+                        .param("name", "")
+                        .param("habitatType", "SAVANNA")
+                        .param("capacity", "3"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/enclosure/form"))
+                .andExpect(model().attribute("enclosureId", 1L))
+                .andExpect(model().attributeHasFieldErrors("enclosureRequest", "name"));
+        verifyNoInteractions(enclosureService);
+    }
+
+    @Test
+    void update_duplicateName_showsErrorUnderName() throws Exception {
+        when(enclosureService.update(eq(1L), any(EnclosureRequest.class)))
+                .thenThrow(new BusinessRuleException("Enclosure with name 'Savanna 1' already exists"));
+
+        mockMvc.perform(post("/admin/enclosures/1")
+                        .with(csrf())
+                        .param("name", "Savanna 1")
+                        .param("habitatType", "SAVANNA")
+                        .param("capacity", "3"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/enclosure/form"))
+                .andExpect(model().attributeHasFieldErrors("enclosureRequest", "name"));
+    }
+
+    @Test
+    void delete_enclosureWithAnimals_redirectsWithErrorMessage() throws Exception {
+        doThrow(new BusinessRuleException("Enclosure still has animals and cannot be deleted"))
+                .when(enclosureService).delete(1L);
+
+        mockMvc.perform(post("/admin/enclosures/1/delete").with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/enclosures"))
+                .andExpect(flash().attribute("errorMessage", "Enclosure still has animals and cannot be deleted"));
+    }
+
+    @Test
+    void keepersPage_showsAssignmentsAndAllKeepers() throws Exception {
+        when(enclosureService.findById(1L)).thenReturn(SAVANNA);
+        when(enclosureService.findActiveKeepers(1L)).thenReturn(List.of());
+        when(enclosureService.findAllKeepers()).thenReturn(List.of());
+
+        mockMvc.perform(get("/admin/enclosures/1/keepers"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/enclosure/keepers"))
+                .andExpect(model().attributeExists("enclosure", "assignments", "allKeepers",
+                        "keeperAssignmentRequest"));
+    }
+
+    @Test
+    void assignKeeper_validForm_redirectsBackToKeepersPage() throws Exception {
+        mockMvc.perform(post("/admin/enclosures/1/keepers").with(csrf()).param("keeperId", "7"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/enclosures/1/keepers"))
+                .andExpect(flash().attribute("successMessage", "Keeper assigned"));
+        verify(enclosureService).assignKeeper(1L, 7L);
+    }
+
+    @Test
+    void assignKeeper_businessRuleError_showsGlobalError() throws Exception {
+        when(enclosureService.findById(1L)).thenReturn(SAVANNA);
+        when(enclosureService.assignKeeper(1L, 7L))
+                .thenThrow(new BusinessRuleException("Keeper is already assigned to this enclosure"));
+
+        mockMvc.perform(post("/admin/enclosures/1/keepers").with(csrf()).param("keeperId", "7"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/enclosure/keepers"))
+                .andExpect(model().attributeHasErrors("keeperAssignmentRequest"));
+    }
+
+    @Test
+    void removeKeeper_redirectsBackToKeepersPage() throws Exception {
+        mockMvc.perform(post("/admin/enclosures/1/keepers/7/remove").with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/enclosures/1/keepers"));
+        verify(enclosureService).unassignKeeper(1L, 7L);
     }
 }

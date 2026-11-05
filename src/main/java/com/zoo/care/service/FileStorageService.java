@@ -27,7 +27,7 @@ public class FileStorageService {
 
     private final Path root;
 
-    public FileStorageService(@Value("${app.upload-dir:src/main/resources/photos}") String uploadDir) {
+    public FileStorageService(@Value("${app.upload-dir:uploads/photos}") String uploadDir) {
         this.root = Path.of(uploadDir).toAbsolutePath().normalize();
     }
 

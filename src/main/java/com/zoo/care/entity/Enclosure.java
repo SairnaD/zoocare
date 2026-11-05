@@ -21,10 +21,6 @@ public class Enclosure {
     @Column(name = "enclosure_id")
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "keeper_id")
-    private User keeper;
-
     @Column(nullable = false, unique = true, length = 50)
     private String name;
 

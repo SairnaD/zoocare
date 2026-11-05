@@ -7,6 +7,7 @@ public record KeeperAssignmentResponse(
         Long id,
         Long enclosureId,
         Long keeperId,
+        String keeperName,
         Instant startsAt,
         Instant endsAt,
         Instant createdAt
@@ -17,6 +18,7 @@ public record KeeperAssignmentResponse(
                 assignment.getId(),
                 assignment.getEnclosure().getId(),
                 assignment.getKeeper().getId(),
+                assignment.getKeeper().getFullName(),
                 assignment.getStartsAt(),
                 assignment.getEndsAt(),
                 assignment.getCreatedAt()

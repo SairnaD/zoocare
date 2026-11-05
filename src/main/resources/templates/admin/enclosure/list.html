@@ -32,6 +32,8 @@
                 <td th:text="${enclosure.capacity}">3</td>
                 <td class="text-end">
                     <div class="d-inline-flex gap-2">
+                        <a th:href="@{/admin/enclosures/{id}/keepers(id=${enclosure.id})}"
+                           class="btn btn-outline-success btn-sm">Keepers</a>
                         <a th:href="@{/admin/enclosures/{id}/edit(id=${enclosure.id})}"
                            class="btn btn-outline-secondary btn-sm">Edit</a>
                         <form th:action="@{/admin/enclosures/{id}/delete(id=${enclosure.id})}" method="post"
