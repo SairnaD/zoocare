@@ -92,6 +92,9 @@
                            th:classappend="${#fields.hasErrors('photo')} ? 'is-invalid'"
                            accept="image/jpeg,image/png,image/webp,image/gif">
                     <div class="form-text">JPG, PNG, WebP or GIF, up to 5 MB.</div>
+                    <div th:if="${pendingPhoto != null}" class="form-text text-success">
+                        Photo already uploaded. Choose a new file only if you want to replace it.
+                    </div>
                     <div th:if="${#fields.hasErrors('photo')}" th:errors="*{photo}"
                          class="invalid-feedback">Photo error</div>
                 </div>

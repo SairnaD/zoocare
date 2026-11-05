@@ -15,7 +15,8 @@
 
 <nav th:fragment="navbar" class="navbar navbar-expand-md navbar-dark bg-success">
     <div class="container">
-        <a class="navbar-brand" th:href="@{/}">ZooCare</a>
+        <a class="navbar-brand" sec:authorize="isAnonymous()" th:href="@{/}">ZooCare</a>
+        <a class="navbar-brand" sec:authorize="isAuthenticated()" th:href="@{/dashboard}">ZooCare</a>
         <button class="navbar-toggler" type="button"
                 data-bs-toggle="collapse" data-bs-target="#mainNav"
                 aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">

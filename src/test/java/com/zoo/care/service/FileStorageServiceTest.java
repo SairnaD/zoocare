@@ -9,8 +9,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.*;
 
 class FileStorageServiceTest {
 
@@ -26,10 +25,9 @@ class FileStorageServiceTest {
     }
 
     @Test
-    void validate_missingFileReturnsMessage() {
-        assertThat(service.validate(null)).isEqualTo("Please choose an image");
-        assertThat(service.validate(new MockMultipartFile("photo", new byte[0])))
-                .isEqualTo("Please choose an image");
+    void validate_missingFileIsAccepted() {
+        assertThat(service.validate(null)).isNull();
+        assertThat(service.validate(new MockMultipartFile("photo", new byte[0]))).isNull();
     }
 
     @Test
@@ -61,5 +59,29 @@ class FileStorageServiceTest {
         MockMultipartFile pdf = new MockMultipartFile("photo", "a.pdf", "application/pdf", new byte[]{1});
 
         assertThatThrownBy(() -> service.store(pdf)).isInstanceOf(IllegalArgumentException.class);
+    }
+    @Test
+    void delete_removesStoredFile() {
+        String stored = service.store(new MockMultipartFile("photo", "leo.png", "image/png", new byte[]{1}));
+
+        service.delete(stored);
+
+        assertThat(Files.exists(tempDir.resolve(stored))).isFalse();
+    }
+
+    @Test
+    void delete_ignoresMissingAndBlankNames() {
+        assertThatCode(() -> service.delete(null)).doesNotThrowAnyException();
+        assertThatCode(() -> service.delete("")).doesNotThrowAnyException();
+        assertThatCode(() -> service.delete("missing.png")).doesNotThrowAnyException();
+
+        assertThat(Files.exists(tempDir)).isTrue(); // the photo folder itself is never deleted
+    }
+
+    @Test
+    void store_rejectsEmptyFile() {
+        MockMultipartFile empty = new MockMultipartFile("photo", new byte[0]);
+
+        assertThatThrownBy(() -> service.store(empty)).isInstanceOf(IllegalArgumentException.class);
     }
 }

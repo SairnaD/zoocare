@@ -30,7 +30,7 @@
             <tbody>
             <tr th:each="animal : ${animals}">
                 <td>
-                    <img th:if="${animal.photo() != null}" th:src="@{/photos/{f}(f=${animal.photo()})}"
+                    <img th:src="@{${animal.photoUrl()}}"
                          th:alt="${animal.name()}" class="rounded" width="48" height="48"
                          style="object-fit: cover">
                 </td>

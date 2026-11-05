@@ -17,7 +17,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
 import java.util.List;
 
 @Slf4j
@@ -29,7 +28,6 @@ public class AnimalService {
     private final AnimalRepository animalRepository;
     private final SpeciesRepository speciesRepository;
     private final EnclosureRepository enclosureRepository;
-    private final FileStorageService fileStorageService;
 
     public List<AnimalResponse> findAll() {
         return animalRepository.findAll(Sort.by("name")).stream()
@@ -43,7 +41,7 @@ public class AnimalService {
     }
 
     @Transactional
-    public AnimalResponse create(AnimalRequest request) {
+    public AnimalResponse create(AnimalRequest request, String photoFile) {
         String name = request.name().trim();
         if (animalRepository.existsByNameIgnoreCase(name)) {
             throw new BusinessRuleException("Animal with name '" + name + "' already exists");
@@ -54,7 +52,6 @@ public class AnimalService {
                 .orElseThrow(() -> new ResourceNotFoundException("Enclosure", request.enclosureId()));
         checkPlacement(species, enclosure);
 
-        String photoFile = fileStorageService.store(request.photo());
         Animal saved = animalRepository.save(Animal.builder()
                 .name(name)
                 .species(species)
