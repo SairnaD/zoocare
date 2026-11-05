@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Animals')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h1 class="h3 mb-0">Animals</h1>
+        <a th:href="@{/admin/animals/new}" class="btn btn-success">Add animal</a>
+    </div>
+
+    <div th:if="${successMessage}" th:text="${successMessage}" class="alert alert-success">Saved</div>
+
+    <p th:if="${#lists.isEmpty(animals)}" class="text-muted">No animals yet.</p>
+
+    <div th:unless="${#lists.isEmpty(animals)}" class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+            <tr>
+                <th scope="col">Photo</th>
+                <th scope="col">Name</th>
+                <th scope="col">Species</th>
+                <th scope="col">Enclosure</th>
+                <th scope="col">Birth date</th>
+                <th scope="col">Feeding every</th>
+                <th scope="col">Health</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="animal : ${animals}">
+                <td>
+                    <img th:if="${animal.photo() != null}" th:src="@{/photos/{f}(f=${animal.photo()})}"
+                         th:alt="${animal.name()}" class="rounded" width="48" height="48"
+                         style="object-fit: cover">
+                </td>
+                <td><a th:href="@{/admin/animals/{id}(id=${animal.id()})}" th:text="${animal.name()}">Leo</a></td>
+                <td th:text="${animal.speciesName()}">Lion</td>
+                <td th:text="${animal.enclosureName()}">Savannah</td>
+                <td th:text="${animal.birthDate()}">2020-05-01</td>
+                <td th:text="|${animal.feedingInterval()} h|">6 h</td>
+                <td th:text="${animal.healthStatus()}">HEALTHY</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

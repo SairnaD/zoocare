@@ -1,10 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Admin dashboard')}"></head>
 <body>
-ADMIN
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container py-4">
+    <h1 class="h3 mb-4">Admin dashboard</h1>
+    <div class="row g-3">
+        <div class="col-12 col-md-6 col-lg-4">
+            <a th:href="@{/admin/species}" class="card h-100 text-decoration-none">
+                <div class="card-body">
+                    <h2 class="h5">Species</h2>
+                    <p class="mb-0 text-muted">Manage animal species</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-12 col-md-6 col-lg-4">
+            <a th:href="@{/admin/animals}" class="card h-100 text-decoration-none">
+                <div class="card-body">
+                    <h2 class="h5">Animals</h2>
+                    <p class="mb-0 text-muted">Manage animals</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-12 col-md-6 col-lg-4">
+            <a th:href="@{/admin/enclosures}" class="card h-100 text-decoration-none">
+                <div class="card-body">
+                    <h2 class="h5">Enclosures</h2>
+                    <p class="mb-0 text-muted">Manage enclosures and their keepers</p>
+                </div>
+            </a>
+        </div>
+    </div>
+</main>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
 </body>
 </html>

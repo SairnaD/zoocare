@@ -22,23 +22,19 @@ public class AdminInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    // Credentials come from application properties (app.admin.*).
-    // The values after ':' are defaults for local development only.
-    // TODO: before deploying, set app.admin.username and app.admin.password
-    //  so the default admin123 password is never used in production.
-    @Value("${app.admin.username:admin}")
+    @Value("${app.admin.username}")
     private String adminUsername;
 
-    @Value("${app.admin.password:admin123}")
+    @Value("${app.admin.password}")
     private String adminPassword;
 
     @Override
-    public void run(String... args) throws Exception {
+    public void run(String... args) {
         if (!userRepository.existsByUsername(adminUsername)) {
             User admin = User.builder()
                     .username(adminUsername)
                     .password(passwordEncoder.encode(adminPassword))
-                    .email("admin@test.com")
+                    .email("admin@zoocare.local")
                     .fullName("Admin")
                     .role(Role.ADMIN)
                     .build();

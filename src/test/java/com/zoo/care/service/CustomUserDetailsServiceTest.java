@@ -13,7 +13,9 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,9 +36,42 @@ class CustomUserDetailsServiceTest {
             .build();
 
     @Test
+    void loadUserByUsername_keeperReturnsDetailsWithKeeperAuthority() {
+        when(userRepository.findByUsername("Ben")).thenReturn(Optional.of(user));
+
+        UserDetails details = customUserDetailsService.loadUserByUsername("Ben");
+
+        assertEquals("Ben", details.getUsername());
+        assertEquals("hashedPassword", details.getPassword());
+        assertEquals(1, details.getAuthorities().size());
+        assertTrue(details.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_KEEPER")));
+    }
+
+    @Test
+    void loadUserByUsername_adminReturnsAdminAuthority() {
+        User admin = User.builder()
+                .username("admin")
+                .password("adminHash")
+                .email("admin@zoocare.local")
+                .fullName("Admin")
+                .role(Role.ADMIN)
+                .build();
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(admin));
+
+        UserDetails details = customUserDetailsService.loadUserByUsername("admin");
+
+        assertTrue(details.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")));
+    }
+
+    @Test
     void loadUserByUsername_unknownUserThrowsException() {
         when(userRepository.findByUsername("Ben")).thenReturn(Optional.empty());
-        assertThrows(UsernameNotFoundException.class,
+
+        UsernameNotFoundException e = assertThrows(UsernameNotFoundException.class,
                 () -> customUserDetailsService.loadUserByUsername("Ben"));
+
+        assertEquals("User not found: Ben", e.getMessage());
     }
 }

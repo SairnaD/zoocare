@@ -9,7 +9,9 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @WebMvcTest(DashboardController.class)
 @Import(SecurityConfig.class)
@@ -19,38 +21,8 @@ class DashboardControllerTest {
     private MockMvc mockMvc;
 
     @Test
-    void getAdmin_notLoggedInRedirectsToLogin() throws Exception {
-        mockMvc.perform(get("/admin"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/login"));
-    }
-
-    @Test
-    @WithMockUser(roles = "KEEPER")
-    void getAdmin_keeperIsForbidden() throws Exception {
-        mockMvc.perform(get("/admin"))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
     @WithMockUser(roles = "ADMIN")
-    void getAdmin_returnsAdminDashboard() throws Exception {
-        mockMvc.perform(get("/admin"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("admin/dashboard"));
-    }
-
-    @Test
-    @WithMockUser(roles = "KEEPER")
-    void getKeeper_returnsKeeperDashboard() throws Exception {
-        mockMvc.perform(get("/keeper"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("keeper/dashboard"));
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    void getDashboard_adminRedirectsToAdmin() throws Exception {
+    void dashboard_adminIsRedirectedToAdminPage() throws Exception {
         mockMvc.perform(get("/dashboard"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin"));
@@ -58,9 +30,46 @@ class DashboardControllerTest {
 
     @Test
     @WithMockUser(roles = "KEEPER")
-    void getDashboard_keeperRedirectsToKeeper() throws Exception {
+    void dashboard_keeperIsRedirectedToKeeperPage() throws Exception {
         mockMvc.perform(get("/dashboard"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/keeper"));
+    }
+
+    @Test
+    void dashboard_anonymousIsRedirectedToLogin() throws Exception {
+        mockMvc.perform(get("/dashboard"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminPage_adminSeesAdminDashboard() throws Exception {
+        mockMvc.perform(get("/admin"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/dashboard"));
+    }
+
+    @Test
+    @WithMockUser(roles = "KEEPER")
+    void adminPage_keeperIsForbidden() throws Exception {
+        mockMvc.perform(get("/admin"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "KEEPER")
+    void keeperPage_keeperSeesKeeperDashboard() throws Exception {
+        mockMvc.perform(get("/keeper"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("keeper/dashboard"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void keeperPage_adminIsForbidden() throws Exception {
+        mockMvc.perform(get("/keeper"))
+                .andExpect(status().isForbidden());
     }
 }

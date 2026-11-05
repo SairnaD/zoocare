@@ -2,6 +2,7 @@ package com.zoo.care.controller;
 
 import com.zoo.care.dto.EnclosureRequest;
 import com.zoo.care.dto.EnclosureResponse;
+import com.zoo.care.dto.KeeperAssignmentRequest;
 import com.zoo.care.entity.HabitatType;
 import com.zoo.care.exception.BusinessRuleException;
 import com.zoo.care.service.EnclosureService;
@@ -25,8 +26,14 @@ public class EnclosurePageController {
     private static final String LIST_VIEW = "admin/enclosure/list";
     private static final String FORM_VIEW = "admin/enclosure/form";
     private static final String REDIRECT_TO_LIST = "redirect:/admin/enclosures";
+    private static final String KEEPERS_VIEW = "admin/enclosure/keepers";
 
     private final EnclosureService enclosureService;
+
+    @ModelAttribute("habitatTypes")
+    public HabitatType[] habitatTypes() {
+        return HabitatType.values();
+    }
 
     @GetMapping
     public String list(Model model) {
@@ -37,22 +44,21 @@ public class EnclosurePageController {
     @GetMapping("/new")
     public String newForm(Model model) {
         model.addAttribute("enclosureRequest", new EnclosureRequest(null, null, null));
-        return formView(model, null);
+        return FORM_VIEW;
     }
 
     @PostMapping
     public String create(@Valid @ModelAttribute("enclosureRequest") EnclosureRequest request,
                          BindingResult bindingResult,
-                         Model model,
                          RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
-            return formView(model, null);
+            return FORM_VIEW;
         }
         try {
             enclosureService.create(request);
         } catch (BusinessRuleException ex) {
             bindingResult.rejectValue("name", "duplicate", ex.getMessage());
-            return formView(model, null);
+            return FORM_VIEW;
         }
         redirectAttributes.addFlashAttribute("successMessage", "Enclosure created");
         return REDIRECT_TO_LIST;
@@ -61,9 +67,10 @@ public class EnclosurePageController {
     @GetMapping("/{id}/edit")
     public String editForm(@PathVariable Long id, Model model) {
         EnclosureResponse enclosure = enclosureService.findById(id);
+        model.addAttribute("enclosureId", id);
         model.addAttribute("enclosureRequest",
                 new EnclosureRequest(enclosure.name(), enclosure.habitatType(), enclosure.capacity()));
-        return formView(model, id);
+        return FORM_VIEW;
     }
 
     @PostMapping("/{id}")
@@ -73,13 +80,15 @@ public class EnclosurePageController {
                          Model model,
                          RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
-            return formView(model, id);
+            model.addAttribute("enclosureId", id);
+            return FORM_VIEW;
         }
         try {
             enclosureService.update(id, request);
         } catch (BusinessRuleException ex) {
             bindingResult.rejectValue("name", "duplicate", ex.getMessage());
-            return formView(model, id);
+            model.addAttribute("enclosureId", id);
+            return FORM_VIEW;
         }
         redirectAttributes.addFlashAttribute("successMessage", "Enclosure updated");
         return REDIRECT_TO_LIST;
@@ -96,9 +105,46 @@ public class EnclosurePageController {
         return REDIRECT_TO_LIST;
     }
 
-    private String formView(Model model, Long enclosureId) {
-        model.addAttribute("enclosureId", enclosureId);
-        model.addAttribute("habitatTypes", HabitatType.values());
-        return FORM_VIEW;
+    @GetMapping("/{id}/keepers")
+    public String keepers(@PathVariable Long id, Model model) {
+        model.addAttribute("keeperAssignmentRequest", new KeeperAssignmentRequest(null));
+        fillKeepersPage(model, id);
+        return KEEPERS_VIEW;
+    }
+
+    @PostMapping("/{id}/keepers")
+    public String assignKeeper(@PathVariable Long id,
+                               @Valid @ModelAttribute("keeperAssignmentRequest") KeeperAssignmentRequest request,
+                               BindingResult bindingResult,
+                               Model model,
+                               RedirectAttributes redirectAttributes) {
+        if (bindingResult.hasErrors()) {
+            fillKeepersPage(model, id);
+            return KEEPERS_VIEW;
+        }
+        try {
+            enclosureService.assignKeeper(id, request.keeperId());
+        } catch (BusinessRuleException ex) {
+            bindingResult.reject("assign.failed", ex.getMessage());
+            fillKeepersPage(model, id);
+            return KEEPERS_VIEW;
+        }
+        redirectAttributes.addFlashAttribute("successMessage", "Keeper assigned");
+        return "redirect:/admin/enclosures/" + id + "/keepers";
+    }
+
+    @PostMapping("/{id}/keepers/{keeperId}/remove")
+    public String removeKeeper(@PathVariable Long id,
+                               @PathVariable Long keeperId,
+                               RedirectAttributes redirectAttributes) {
+        enclosureService.unassignKeeper(id, keeperId);
+        redirectAttributes.addFlashAttribute("successMessage", "Keeper removed");
+        return "redirect:/admin/enclosures/" + id + "/keepers";
+    }
+
+    private void fillKeepersPage(Model model, Long enclosureId) {
+        model.addAttribute("enclosure", enclosureService.findById(enclosureId));
+        model.addAttribute("assignments", enclosureService.findActiveKeepers(enclosureId));
+        model.addAttribute("allKeepers", enclosureService.findAllKeepers());
     }
 }

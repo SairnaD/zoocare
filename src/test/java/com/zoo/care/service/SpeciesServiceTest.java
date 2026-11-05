@@ -7,27 +7,30 @@ import com.zoo.care.entity.HabitatType;
 import com.zoo.care.entity.Species;
 import com.zoo.care.exception.BusinessRuleException;
 import com.zoo.care.exception.ResourceNotFoundException;
+import com.zoo.care.repository.AnimalRepository;
 import com.zoo.care.repository.SpeciesRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class SpeciesServiceTest {
 
     @Mock
     private SpeciesRepository speciesRepository;
+
+    @Mock
+    private AnimalRepository animalRepository;
 
     @InjectMocks
     private SpeciesService speciesService;
@@ -97,6 +100,7 @@ class SpeciesServiceTest {
         speciesService.delete(1L);
 
         verify(speciesRepository).delete(lion);
+        verify(speciesRepository).flush();
     }
 
     @Test
@@ -106,6 +110,28 @@ class SpeciesServiceTest {
         assertThatThrownBy(() -> speciesService.delete(99L))
                 .isInstanceOf(ResourceNotFoundException.class);
         verify(speciesRepository, never()).delete(any());
+    }
+
+    @Test
+    void delete_speciesInUse_throwsBusinessRuleException() {
+        when(speciesRepository.findById(1L)).thenReturn(Optional.of(existingLion()));
+        doThrow(new DataIntegrityViolationException("foreign key violation"))
+                .when(speciesRepository).flush();
+
+        assertThatThrownBy(() -> speciesService.delete(1L))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("Species is in use and cannot be deleted");
+    }
+
+    @Test
+    void update_habitatChangeWithAnimals_throwsBusinessRuleException() {
+        when(speciesRepository.findById(1L)).thenReturn(Optional.of(existingLion()));
+        when(speciesRepository.existsByNameIgnoreCaseAndIdNot("Lion", 1L)).thenReturn(false);
+        when(animalRepository.existsBySpeciesId(1L)).thenReturn(true);
+
+        assertThatThrownBy(() -> speciesService.update(1L,
+                new SpeciesRequest("Lion", HabitatType.JUNGLE, DietType.CARNIVORE)))
+                .isInstanceOf(BusinessRuleException.class);
     }
 
     private SpeciesRequest lionRequest(String name) {

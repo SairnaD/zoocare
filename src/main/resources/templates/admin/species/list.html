@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Species')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3 mb-0">Species</h1>
+        <a th:href="@{/admin/species/new}" class="btn btn-success">Add species</a>
+    </div>
+
+    <div th:if="${successMessage}" th:text="${successMessage}" class="alert alert-success">Saved</div>
+    <div th:if="${errorMessage}" th:text="${errorMessage}" class="alert alert-danger">Error</div>
+
+    <div th:if="${#lists.isEmpty(speciesList)}" class="alert alert-info">No species yet.</div>
+
+    <div th:unless="${#lists.isEmpty(speciesList)}" class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th>Habitat</th>
+                <th>Diet</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="s : ${speciesList}">
+                <td th:text="${s.name()}">Lion</td>
+                <td th:text="${s.habitatType()}">SAVANNA</td>
+                <td th:text="${s.dietType()}">CARNIVORE</td>
+                <td class="text-end">
+                    <a th:href="@{/admin/species/{id}/edit(id=${s.id()})}"
+                       class="btn btn-sm btn-outline-secondary">Edit</a>
+                    <form th:action="@{/admin/species/{id}/delete(id=${s.id()})}" method="post"
+                          class="d-inline" onsubmit="return confirm('Delete this species?');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

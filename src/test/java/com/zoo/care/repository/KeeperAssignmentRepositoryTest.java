@@ -171,6 +171,41 @@ public class KeeperAssignmentRepositoryTest {
         assertThat(result).isTrue();
     }
 
+    @Test
+    @DisplayName("findActive returns the assignment only while it is active")
+    void findActive_onlyWhileActive() {
+        AssignmentIds ids = persistAssignment(
+                Instant.parse("2026-11-04T08:00:00Z"), Instant.parse("2026-11-04T10:00:00Z"));
+
+        assertThat(repository.findActive(ids.enclosureId(), ids.keeperId(),
+                Instant.parse("2026-11-04T09:00:00Z"))).isPresent();
+        assertThat(repository.findActive(ids.enclosureId(), ids.keeperId(),
+                Instant.parse("2026-11-04T12:00:00Z"))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("findActiveByEnclosure ignores finished assignments")
+    void findActiveByEnclosure_ignoresFinished() {
+        AssignmentIds ids = persistAssignment(
+                Instant.parse("2026-11-04T08:00:00Z"), Instant.parse("2026-11-04T10:00:00Z"));
+
+        assertThat(repository.findActiveByEnclosure(ids.enclosureId(),
+                Instant.parse("2026-11-04T12:00:00Z"))).isEmpty();
+        assertThat(repository.findActiveByEnclosure(ids.enclosureId(),
+                Instant.parse("2026-11-04T09:00:00Z"))).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("deleteByEnclosureId removes the assignments of that enclosure")
+    void deleteByEnclosureId_removesAssignments() {
+        AssignmentIds ids = persistAssignment(Instant.parse("2026-11-04T08:00:00Z"), null);
+
+        repository.deleteByEnclosureId(ids.enclosureId());
+        entityManager.flush();
+
+        assertThat(repository.count()).isZero();
+    }
+
     private AssignmentIds persistAssignment(Instant startsAt, Instant endsAt) {
         User keeper = User.builder()
                 .username("keeper-test")

@@ -4,10 +4,10 @@
 <body>
 <nav th:replace="~{fragments/layout :: navbar}"></nav>
 
-<main class="container py-5">
+<main class="container py-4">
     <div class="row justify-content-center">
-        <div class="col-12 col-sm-10 col-md-8 col-lg-6">
-            <h1 class="h3 mb-4" th:text="${speciesId == null} ? 'New species' : 'Edit species'">New species</h1>
+        <div class="col-12 col-md-8 col-lg-6">
+            <h1 class="h3 mb-4" th:text="${speciesId == null} ? 'Add species' : 'Edit species'">Species</h1>
 
             <form th:action="${speciesId == null} ? @{/admin/species} : @{/admin/species/{id}(id=${speciesId})}"
                   th:object="${speciesRequest}" method="post" novalidate>
@@ -30,18 +30,17 @@
                          class="invalid-feedback">Habitat error</div>
                 </div>
 
-                <div class="mb-4">
+                <div class="mb-3">
                     <label for="dietType" class="form-label">Diet</label>
                     <select th:field="*{dietType}" th:errorclass="is-invalid" class="form-select">
-                        <option value="">Choose diet...</option>
-                        <option th:each="diet : ${dietTypes}"
-                                th:value="${diet}" th:text="${diet}">CARNIVORE</option>
+                        <option value="">Choose...</option>
+                        <option th:each="diet : ${dietTypes}" th:value="${diet}" th:text="${diet}">CARNIVORE</option>
                     </select>
                     <div th:if="${#fields.hasErrors('dietType')}" th:errors="*{dietType}"
                          class="invalid-feedback">Diet error</div>
                 </div>
 
-                <div class="d-flex gap-2">
+                <div>
                     <button type="submit" class="btn btn-success">Save</button>
                     <a th:href="@{/admin/species}" class="btn btn-outline-secondary">Cancel</a>
                 </div>

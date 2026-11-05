@@ -23,11 +23,21 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequiredArgsConstructor
 public class SpeciesPageController {
 
-    private static final String LIST_VIEW = "species/list";
-    private static final String FORM_VIEW = "species/form";
+    private static final String LIST_VIEW = "admin/species/list";
+    private static final String FORM_VIEW = "admin/species/form";
     private static final String REDIRECT_TO_LIST = "redirect:/admin/species";
 
     private final SpeciesService speciesService;
+
+    @ModelAttribute("habitatTypes")
+    public HabitatType[] habitatTypes() {
+        return HabitatType.values();
+    }
+
+    @ModelAttribute("dietTypes")
+    public DietType[] dietTypes() {
+        return DietType.values();
+    }
 
     @GetMapping
     public String list(Model model) {
@@ -38,22 +48,21 @@ public class SpeciesPageController {
     @GetMapping("/new")
     public String newForm(Model model) {
         model.addAttribute("speciesRequest", new SpeciesRequest(null, null, null));
-        return formView(model, null);
+        return FORM_VIEW;
     }
 
     @PostMapping
     public String create(@Valid @ModelAttribute("speciesRequest") SpeciesRequest request,
                          BindingResult bindingResult,
-                         Model model,
                          RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
-            return formView(model, null);
+            return FORM_VIEW;
         }
         try {
             speciesService.create(request);
         } catch (BusinessRuleException ex) {
             bindingResult.rejectValue("name", "duplicate", ex.getMessage());
-            return formView(model, null);
+            return FORM_VIEW;
         }
         redirectAttributes.addFlashAttribute("successMessage", "Species created");
         return REDIRECT_TO_LIST;
@@ -62,9 +71,10 @@ public class SpeciesPageController {
     @GetMapping("/{id}/edit")
     public String editForm(@PathVariable Long id, Model model) {
         SpeciesResponse species = speciesService.findById(id);
+        model.addAttribute("speciesId", id);
         model.addAttribute("speciesRequest",
                 new SpeciesRequest(species.name(), species.habitatType(), species.dietType()));
-        return formView(model, id);
+        return FORM_VIEW;
     }
 
     @PostMapping("/{id}")
@@ -74,13 +84,15 @@ public class SpeciesPageController {
                          Model model,
                          RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
-            return formView(model, id);
+            model.addAttribute("speciesId", id);
+            return FORM_VIEW;
         }
         try {
             speciesService.update(id, request);
         } catch (BusinessRuleException ex) {
             bindingResult.rejectValue("name", "duplicate", ex.getMessage());
-            return formView(model, id);
+            model.addAttribute("speciesId", id);
+            return FORM_VIEW;
         }
         redirectAttributes.addFlashAttribute("successMessage", "Species updated");
         return REDIRECT_TO_LIST;
@@ -95,12 +107,5 @@ public class SpeciesPageController {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
         }
         return REDIRECT_TO_LIST;
-    }
-
-    private String formView(Model model, Long speciesId) {
-        model.addAttribute("speciesId", speciesId);
-        model.addAttribute("habitatTypes", HabitatType.values());
-        model.addAttribute("dietTypes", DietType.values());
-        return FORM_VIEW;
     }
 }

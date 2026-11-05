@@ -13,6 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithAnonymousUser;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -33,6 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(SpeciesApiController.class)
 @Import(SecurityConfig.class)
+@WithMockUser(roles = "ADMIN")
 class SpeciesApiControllerTest {
 
     private static final String LION_JSON = """
@@ -146,5 +149,59 @@ class SpeciesApiControllerTest {
 
         mockMvc.perform(delete("/api/species/99"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "KEEPER")
+    void getAll_keeperCanRead() throws Exception {
+        when(speciesService.findAll()).thenReturn(List.of(LION));
+
+        mockMvc.perform(get("/api/species"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithAnonymousUser
+    void getAll_anonymousIsRedirectedToLogin() throws Exception {
+        mockMvc.perform(get("/api/species"))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    @WithMockUser(roles = "KEEPER")
+    void create_keeperIsForbidden() throws Exception {
+        mockMvc.perform(post("/api/species")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(LION_JSON))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(speciesService);
+    }
+
+    @Test
+    @WithMockUser(roles = "KEEPER")
+    void update_keeperIsForbidden() throws Exception {
+        mockMvc.perform(put("/api/species/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(LION_JSON))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(speciesService);
+    }
+
+    @Test
+    @WithMockUser(roles = "KEEPER")
+    void delete_keeperIsForbidden() throws Exception {
+        mockMvc.perform(delete("/api/species/1"))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(speciesService);
+    }
+
+    @Test
+    void delete_speciesInUse_returnsConflict() throws Exception {
+        doThrow(new BusinessRuleException("Species is in use and cannot be deleted"))
+                .when(speciesService).delete(1L);
+
+        mockMvc.perform(delete("/api/species/1"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Species is in use and cannot be deleted"));
     }
 }

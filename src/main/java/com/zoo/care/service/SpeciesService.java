@@ -5,9 +5,11 @@ import com.zoo.care.dto.SpeciesResponse;
 import com.zoo.care.entity.Species;
 import com.zoo.care.exception.BusinessRuleException;
 import com.zoo.care.exception.ResourceNotFoundException;
+import com.zoo.care.repository.AnimalRepository;
 import com.zoo.care.repository.SpeciesRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +23,7 @@ import java.util.List;
 public class SpeciesService {
 
     private final SpeciesRepository speciesRepository;
+    private final AnimalRepository animalRepository;
 
     public List<SpeciesResponse> findAll() {
         return speciesRepository.findAll(Sort.by("name")).stream()
@@ -55,6 +58,10 @@ public class SpeciesService {
         if (speciesRepository.existsByNameIgnoreCaseAndIdNot(name, id)) {
             throw duplicateName(name);
         }
+        if (species.getHabitatType() != request.habitatType()
+                && animalRepository.existsBySpeciesId(id)) {
+            throw new BusinessRuleException("Habitat cannot be changed while the species has animals");
+        }
         species.setName(name);
         species.setHabitatType(request.habitatType());
         species.setDietType(request.dietType());
@@ -65,7 +72,12 @@ public class SpeciesService {
     @Transactional
     public void delete(Long id) {
         Species species = getSpecies(id);
-        speciesRepository.delete(species);
+        try {
+            speciesRepository.delete(species);
+            speciesRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessRuleException("Species is in use and cannot be deleted");
+        }
         log.info("Deleted species '{}' (id={})", species.getName(), id);
     }
 
