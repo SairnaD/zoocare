@@ -16,7 +16,6 @@ public record AnimalResponse(
         int feedingIntervalHours,
         String description
 ) {
-
     public static AnimalResponse from(Animal animal) {
         return new AnimalResponse(
                 animal.getId(),

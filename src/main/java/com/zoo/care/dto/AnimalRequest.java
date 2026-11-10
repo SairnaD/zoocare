@@ -12,7 +12,8 @@ import org.springframework.format.annotation.DateTimeFormat;
 import java.time.LocalDate;
 
 public record AnimalRequest(
-        @NotBlank @Size(min = 2, max = 50)
+        @NotBlank
+        @Size(min = 2, max = 50)
         String name,
 
         @NotNull
@@ -21,7 +22,8 @@ public record AnimalRequest(
         @NotNull
         Long enclosureId,
 
-        @NotNull @PastOrPresent
+        @NotNull
+        @PastOrPresent
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         LocalDate birthDate,
 

@@ -33,7 +33,9 @@ public interface AnimalRepository extends JpaRepository<Animal, Long> {
 
     boolean existsByNameIgnoreCase(String name);
 
+    long countByEnclosureId(Long enclosureId);
+
     boolean existsBySpeciesId(Long speciesId);
 
-    long countByEnclosureId(Long enclosureId);
+    boolean existsByNameIgnoreCaseAndIdNot(String name, Long id);
 }
