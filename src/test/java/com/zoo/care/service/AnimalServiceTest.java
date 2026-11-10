@@ -218,14 +218,11 @@ class AnimalServiceTest {
         assertEquals(enclosure, saved.getEnclosure());
         assertEquals(LocalDate.of(2020, 5, 1), saved.getBirthDate());
         assertEquals(180.5f, saved.getWeight());
-        assertSame(species, saved.getSpecies());
-        assertSame(enclosure, saved.getEnclosure());
         assertEquals(6, saved.getFeedingIntervalHours());
         assertEquals("A lion", saved.getDescription());
         assertEquals(DeletedStatus.PRESENT, saved.getDeletedStatus());
-        assertEquals(DeletedStatus.PRESENT, saved.getDeletedStatus());
         verify(animalRepository).flush();
-        verify(enclosureRepository, never()).findById(any());   // must use the locking query
+        verify(enclosureRepository, never()).findById(any());
     }
 
     @Test
@@ -439,5 +436,15 @@ class AnimalServiceTest {
         assertThrows(ResourceNotFoundException.class, () -> animalService.delete(5L));
 
         verify(animalRepository, never()).delete(any());
+    }
+
+    @Test
+    void delete_animalWithRelatedRecords_throwsAnimalInUse() {
+        Animal leo = animal(5L, "Leo", lion(), savanna(HabitatType.SAVANNA));
+        when(animalRepository.findById(5L)).thenReturn(Optional.of(leo));
+        doThrow(new DataIntegrityViolationException("foreign key violation"))
+                .when(animalRepository).flush();
+
+        assertThrows(AnimalInUseException.class, () -> animalService.delete(5L));
     }
 }
