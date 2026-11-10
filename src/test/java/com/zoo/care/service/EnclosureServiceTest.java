@@ -316,6 +316,33 @@ class EnclosureServiceTest {
         assertThat(enclosureService.findAllKeepers()).hasSize(2);
     }
 
+    @Test
+    void findAll_attachesActiveKeeperNames() {
+        Enclosure savanna = existingSavanna();
+        when(enclosureRepository.findAll(Sort.by("name"))).thenReturn(List.of(savanna));
+        when(keeperAssignmentRepository.findAllActive(NOW)).thenReturn(List.of(activeAssignment(savanna)));
+
+        List<EnclosureResponse> result = enclosureService.findAll();
+
+        assertThat(result.get(0).keeperNames()).containsExactly("Ben Ten");
+    }
+
+    @Test
+    void findById_includesActiveKeeperNames() {
+        Enclosure savanna = existingSavanna();
+        when(enclosureRepository.findById(1L)).thenReturn(Optional.of(savanna));
+        when(keeperAssignmentRepository.findActiveByEnclosure(1L, NOW)).thenReturn(List.of(activeAssignment(savanna)));
+
+        EnclosureResponse response = enclosureService.findById(1L);
+
+        assertThat(response.keeperNames()).containsExactly("Ben Ten");
+    }
+
+    private KeeperAssignment activeAssignment(Enclosure enclosure) {
+        return KeeperAssignment.builder()
+                .id(10L).enclosure(enclosure).keeper(keeper())
+                .startsAt(NOW.minusSeconds(3600)).createdAt(NOW.minusSeconds(3600)).build();
+    }
 
     private EnclosureRequest savannaRequest(String name) {
         return new EnclosureRequest(name, HabitatType.SAVANNA, 3);

@@ -23,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -37,13 +39,19 @@ public class EnclosureService {
     private final Clock clock;
 
     public List<EnclosureResponse> findAll() {
+        Map<Long, List<String>> keeperNamesByEnclosure = keeperAssignmentRepository
+                .findAllActive(Instant.now(clock)).stream()
+                .collect(Collectors.groupingBy(
+                        assignment -> assignment.getEnclosure().getId(),
+                        Collectors.mapping(assignment -> assignment.getKeeper().getFullName(), Collectors.toList())));
         return enclosureRepository.findAll(Sort.by("name")).stream()
-                .map(EnclosureResponse::from)
+                .map(enclosure -> EnclosureResponse.from(enclosure,
+                        keeperNamesByEnclosure.getOrDefault(enclosure.getId(), List.of())))
                 .toList();
     }
 
     public EnclosureResponse findById(Long id) {
-        return EnclosureResponse.from(getEnclosure(id));
+        return toResponseWithKeepers(getEnclosure(id));
     }
 
     @Transactional
@@ -79,7 +87,7 @@ public class EnclosureService {
         enclosure.setHabitatType(request.habitatType());
         enclosure.setCapacity(request.capacity());
         log.info("Updated enclosure '{}' (id={})", name, id);
-        return EnclosureResponse.from(enclosure);
+        return toResponseWithKeepers(enclosure);
     }
 
     @Transactional
@@ -151,5 +159,13 @@ public class EnclosureService {
             throw new UserIsNotKeeperException();
         }
         return keeper;
+    }
+
+    private EnclosureResponse toResponseWithKeepers(Enclosure enclosure) {
+        List<String> keeperNames = keeperAssignmentRepository
+                .findActiveByEnclosure(enclosure.getId(), Instant.now(clock)).stream()
+                .map(assignment -> assignment.getKeeper().getFullName())
+                .toList();
+        return EnclosureResponse.from(enclosure, keeperNames);
     }
 }
