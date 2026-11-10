@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 200 200" role="img" aria-label="ZooCare">
+  <title>ZooCare</title>
+  <circle cx="100" cy="100" r="98" fill="#E7F0EA"/>
+  <g transform="translate(0 6)">
+    <g transform="translate(100 100) scale(0.9) translate(-100 -100)">
+      <path fill="#1F4D3A" d="M44 50 L62 32 L84 44 L70 70 Z M156 50 L138 32 L116 44 L130 70 Z"/>
+      <path fill="#FFFFFF" stroke="#1F4D3A" stroke-width="8" stroke-linejoin="round" d="M70 46 L130 46 L156 84 L150 128 L124 156 L76 156 L50 128 L44 84 Z"/>
+      <path fill="#1F4D3A" stroke="#1F4D3A" stroke-width="4" stroke-linejoin="round" d="M56 108 L70 82 L92 86 L88 114 L68 124 Z"/>
+      <path fill="#1F4D3A" stroke="#1F4D3A" stroke-width="4" stroke-linejoin="round" d="M144 108 L130 82 L108 86 L112 114 L132 124 Z"/>
+      <path fill="#FFFFFF" d="M68 102 Q77 95 86 102 Q77 108 68 102 Z"/>
+      <path fill="#FFFFFF" d="M132 102 Q123 95 114 102 Q123 108 132 102 Z"/>
+      <path fill="#1F4D3A" stroke="#1F4D3A" stroke-width="3" stroke-linejoin="round" d="M92 124 L108 124 L100 134 Z"/>
+      <path fill="none" stroke="#1F4D3A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" d="M100 134 L100 140 M93 145 L100 140 L107 145"/>
+    </g>
+  </g>
+</svg>

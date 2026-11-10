@@ -24,8 +24,7 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex.accessDeniedPage("/access-denied"))
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin())) // H2 console
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.GET, "/register", "/").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/register").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/", "/login", "/register").permitAll()                        .requestMatchers(HttpMethod.POST, "/register").permitAll()
                         .requestMatchers("/access-denied", "/error", "/css/**", "/js/**", "/images/**").permitAll()
                         .requestMatchers("/h2-console/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")

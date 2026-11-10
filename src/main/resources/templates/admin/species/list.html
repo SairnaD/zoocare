@@ -5,42 +5,60 @@
 <nav th:replace="~{fragments/layout :: navbar}"></nav>
 
 <main class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
         <h1 class="h3 mb-0">Species</h1>
-        <a th:href="@{/admin/species/new}" class="btn btn-success">Add species</a>
+        <a th:href="@{/admin/species/new}" class="btn btn-primary">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i> Add species
+        </a>
     </div>
 
-    <div th:if="${successMessage}" th:text="${successMessage}" class="alert alert-success">Saved</div>
-    <div th:if="${errorMessage}" th:text="${errorMessage}" class="alert alert-danger">Error</div>
+    <th:block th:replace="~{fragments/layout :: alerts}"></th:block>
 
-    <div th:if="${#lists.isEmpty(speciesList)}" class="alert alert-info">No species yet.</div>
+    <div th:if="${#lists.isEmpty(speciesList)}" class="card zc-empty">
+        <span class="zc-empty-icon" aria-hidden="true"><i class="bi bi-list"></i></span>
+        <h2 class="h5 mb-1">No species yet</h2>
+        <p class="text-secondary mb-0">Add a species with its habitat and diet type before adding animals.</p>
+    </div>
 
-    <div th:unless="${#lists.isEmpty(speciesList)}" class="table-responsive">
-        <table class="table table-striped align-middle">
-            <thead>
-            <tr>
-                <th>Name</th>
-                <th>Habitat</th>
-                <th>Diet</th>
-                <th></th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="s : ${speciesList}">
-                <td th:text="${s.name()}">Lion</td>
-                <td th:text="${s.habitatType()}">SAVANNA</td>
-                <td th:text="${s.dietType()}">CARNIVORE</td>
-                <td class="text-end">
-                    <a th:href="@{/admin/species/{id}/edit(id=${s.id()})}"
-                       class="btn btn-sm btn-outline-secondary">Edit</a>
-                    <form th:action="@{/admin/species/{id}/delete(id=${s.id()})}" method="post"
-                          class="d-inline" onsubmit="return confirm('Delete this species?');">
-                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                    </form>
-                </td>
-            </tr>
-            </tbody>
-        </table>
+    <div th:unless="${#lists.isEmpty(speciesList)}" class="card overflow-hidden">
+        <div class="card-header bg-transparent py-3">
+            <h2 class="h5 mb-0">All species
+                <span class="text-secondary fw-medium" th:text="|(${#lists.size(speciesList)})|">(7)</span>
+            </h2>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Habitat type</th>
+                    <th scope="col">Diet type</th>
+                    <th scope="col" class="text-end">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="species : ${speciesList}">
+                    <td class="fw-semibold" th:text="${species.name}">Lion</td>
+                    <td>
+                        <span class="chip"
+                              th:classappend="|chip-${#strings.toLowerCase(species.habitatType)}|"
+                              th:text="${#strings.capitalize(#strings.toLowerCase(species.habitatType))}">Savanna</span>
+                    </td>
+                    <td th:text="${#strings.capitalize(#strings.toLowerCase(species.dietType))}">Carnivore</td>
+                    <td class="text-end">
+                        <div class="d-inline-flex gap-2">
+                            <a th:href="@{/admin/species/{id}/edit(id=${species.id})}"
+                               class="btn btn-outline-secondary btn-sm">Edit</a>
+                            <form th:action="@{/admin/species/{id}/delete(id=${species.id})}" method="post"
+                                  onsubmit="return confirm('Delete this species?');">
+                                <button type="submit" class="btn btn-outline-danger btn-sm">Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </main>
 

@@ -1,60 +1,61 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head('Register')}"></head>
-<body>
-<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<body class="d-flex flex-column min-vh-100">
+<header th:replace="~{fragments/layout :: authHeader}"></header>
 
-<main class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-12 col-sm-10 col-md-6 col-lg-4">
-            <h1 class="h3 mb-4 text-center">Create account</h1>
+<main class="container flex-grow-1 d-flex align-items-center justify-content-center py-5">
+    <div class="card p-4 zc-auth-card w-100">
+                <h1 class="h3 mb-4">Create your account</h1>
 
-            <form th:action="@{/register}" th:object="${registerRequest}" method="post" novalidate>
+                <form th:action="@{/register}" th:object="${registerRequest}" method="post" novalidate>
 
-                <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger">
-                    <p th:each="error : ${#fields.globalErrors()}" th:text="${error}" class="mb-0">Error</p>
-                </div>
+                    <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger d-flex align-items-start gap-2" role="alert">
+                        <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+                        <div>
+                            <p th:each="error : ${#fields.globalErrors()}" th:text="${error}" class="mb-0">Error</p>
+                        </div>
+                    </div>
 
-                <div class="mb-3">
-                    <label for="username" class="form-label">Username</label>
-                    <input type="text" th:field="*{username}" th:errorclass="is-invalid"
-                           class="form-control" autocomplete="username">
-                    <div th:if="${#fields.hasErrors('username')}" th:errors="*{username}"
-                         class="invalid-feedback">Username error</div>
-                </div>
+                    <div class="mb-3">
+                        <label for="username" class="form-label fw-semibold">Username</label>
+                        <input type="text" th:field="*{username}" th:errorclass="is-invalid"
+                               class="form-control" autocomplete="username">
+                        <div th:if="${#fields.hasErrors('username')}" th:errors="*{username}"
+                             class="invalid-feedback">Username error</div>
+                    </div>
 
-                <div class="mb-3">
-                    <label for="fullName" class="form-label">Full name</label>
-                    <input type="text" th:field="*{fullName}" th:errorclass="is-invalid"
-                           class="form-control" autocomplete="name">
-                    <div th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"
-                         class="invalid-feedback">Full name error</div>
-                </div>
+                    <div class="mb-3">
+                        <label for="fullName" class="form-label fw-semibold">Full name</label>
+                        <input type="text" th:field="*{fullName}" th:errorclass="is-invalid"
+                               class="form-control" autocomplete="name">
+                        <div th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"
+                             class="invalid-feedback">Full name error</div>
+                    </div>
 
-                <div class="mb-3">
-                    <label for="email" class="form-label">Email</label>
-                    <input type="email" th:field="*{email}" th:errorclass="is-invalid"
-                           class="form-control" autocomplete="email">
-                    <div th:if="${#fields.hasErrors('email')}" th:errors="*{email}"
-                         class="invalid-feedback">Email error</div>
-                </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label fw-semibold">Email</label>
+                        <input type="email" th:field="*{email}" th:errorclass="is-invalid"
+                               class="form-control" autocomplete="email">
+                        <div th:if="${#fields.hasErrors('email')}" th:errors="*{email}"
+                             class="invalid-feedback">Email error</div>
+                    </div>
 
-                <div class="mb-4">
-                    <label for="password" class="form-label">Password</label>
-                    <input type="password" th:field="*{password}" th:errorclass="is-invalid"
-                           class="form-control" autocomplete="new-password">
-                    <div class="form-text">At least 8 characters.</div>
-                    <div th:if="${#fields.hasErrors('password')}" th:errors="*{password}"
-                         class="invalid-feedback">Password error</div>
-                </div>
+                    <div class="mb-4">
+                        <label for="password" class="form-label fw-semibold">Password</label>
+                        <input type="password" th:field="*{password}" th:errorclass="is-invalid"
+                               class="form-control" autocomplete="new-password">
+                        <div class="form-text">At least 8 characters.</div>
+                        <div th:if="${#fields.hasErrors('password')}" th:errors="*{password}"
+                             class="invalid-feedback">Password error</div>
+                    </div>
 
-                <button type="submit" class="btn btn-success w-100">Register</button>
-            </form>
+                    <button type="submit" class="btn btn-primary w-100">Register</button>
+                </form>
 
-            <p class="text-center mt-3">
-                Already have an account? <a th:href="@{/login}">Log in</a>
-            </p>
-        </div>
+                <p class="text-center small mb-0 mt-4 pt-3 border-top">
+                    Already have an account? <a th:href="@{/login}" class="fw-semibold">Log in</a>
+                </p>
     </div>
 </main>
 
