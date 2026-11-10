@@ -4,8 +4,7 @@ import com.zoo.care.dto.EnclosureRequest;
 import com.zoo.care.dto.EnclosureResponse;
 import com.zoo.care.dto.KeeperAssignmentResponse;
 import com.zoo.care.entity.*;
-import com.zoo.care.exception.BusinessRuleException;
-import com.zoo.care.exception.ResourceNotFoundException;
+import com.zoo.care.exception.*;
 import com.zoo.care.repository.AnimalRepository;
 import com.zoo.care.repository.EnclosureRepository;
 import com.zoo.care.repository.KeeperAssignmentRepository;
@@ -61,113 +60,6 @@ class EnclosureServiceTest {
 
 
     @Test
-    void switchKeeper_sameKeeper_rejectsWithoutChangingAssignment() {
-        Enclosure enclosure = existingSavanna();
-        User oldKeeper = keeper();
-        Instant originalStart = NOW.minusSeconds(3600);
-
-        KeeperAssignment oldAssignment = KeeperAssignment.builder()
-                .id(10L)
-                .enclosure(enclosure)
-                .keeper(oldKeeper)
-                .startsAt(originalStart)
-                .createdAt(originalStart)
-                .endsAt(null)
-                .build();
-
-        when(enclosureRepository.findById(1L))
-                .thenReturn(Optional.of(enclosure));
-        when(keeperAssignmentRepository.findById(10L))
-                .thenReturn(Optional.of(oldAssignment));
-        when(userRepository.findById(7L))
-                .thenReturn(Optional.of(oldKeeper));
-
-        assertThatThrownBy(() ->
-                enclosureService.switchKeeper(1L, 10L, 7L))
-                .isInstanceOf(BusinessRuleException.class)
-                .hasMessage("New keeper must be different from the current keeper");
-
-        assertThat(oldAssignment.getEndsAt()).isNull();
-        assertThat(oldAssignment.getKeeper()).isSameAs(oldKeeper);
-        assertThat(oldAssignment.getEnclosure()).isSameAs(enclosure);
-        assertThat(oldAssignment.getStartsAt()).isEqualTo(originalStart);
-        assertThat(oldAssignment.getCreatedAt()).isEqualTo(originalStart);
-
-        verify(keeperAssignmentRepository, never()).save(any());
-    }
-
-
-    @Test
-    void switchKeeper_closesOldAssignmentAndCreatesNewOne() {
-        Enclosure enclosure = existingSavanna();
-        User oldKeeper = keeper();
-
-        User newKeeper = User.builder()
-                .id(8L)
-                .username("amy")
-                .fullName("Amy Adams")
-                .role(Role.KEEPER)
-                .build();
-
-        Instant originalStart = NOW.minusSeconds(3600);
-
-        KeeperAssignment oldAssignment = KeeperAssignment.builder()
-                .id(10L)
-                .enclosure(enclosure)
-                .keeper(oldKeeper)
-                .startsAt(originalStart)
-                .createdAt(originalStart)
-                .endsAt(null)
-                .build();
-
-        when(enclosureRepository.findById(1L))
-                .thenReturn(Optional.of(enclosure));
-        when(keeperAssignmentRepository.findById(10L))
-                .thenReturn(Optional.of(oldAssignment));
-        when(userRepository.findById(8L))
-                .thenReturn(Optional.of(newKeeper));
-        when(keeperAssignmentRepository.existsActiveAssignment(1L, 8L, NOW))
-                .thenReturn(false);
-        when(keeperAssignmentRepository.save(any(KeeperAssignment.class)))
-                .thenAnswer(invocation -> {
-                    KeeperAssignment assignment = invocation.getArgument(0);
-                    assignment.setId(11L);
-                    return assignment;
-                });
-
-        KeeperAssignmentResponse response =
-                enclosureService.switchKeeper(1L, 10L, 8L);
-
-        assertThat(oldAssignment.getEndsAt()).isEqualTo(NOW);
-        assertThat(oldAssignment.getKeeper()).isSameAs(oldKeeper);
-        assertThat(oldAssignment.getStartsAt()).isEqualTo(originalStart);
-        assertThat(oldAssignment.getCreatedAt()).isEqualTo(originalStart);
-
-        ArgumentCaptor<KeeperAssignment> captor =
-                ArgumentCaptor.forClass(KeeperAssignment.class);
-
-        verify(keeperAssignmentRepository).save(captor.capture());
-
-        KeeperAssignment newAssignment = captor.getValue();
-
-        assertThat(newAssignment).isNotSameAs(oldAssignment);
-        assertThat(newAssignment.getEnclosure()).isSameAs(enclosure);
-        assertThat(newAssignment.getKeeper()).isSameAs(newKeeper);
-        assertThat(newAssignment.getStartsAt()).isEqualTo(NOW);
-        assertThat(newAssignment.getCreatedAt()).isEqualTo(NOW);
-        assertThat(newAssignment.getEndsAt()).isNull();
-
-        assertThat(response.id()).isEqualTo(11L);
-        assertThat(response.enclosureId()).isEqualTo(1L);
-        assertThat(response.keeperId()).isEqualTo(8L);
-        assertThat(response.keeperName()).isEqualTo("Amy Adams");
-        assertThat(response.startsAt()).isEqualTo(NOW);
-        assertThat(response.createdAt()).isEqualTo(NOW);
-        assertThat(response.endsAt()).isNull();
-    }
-
-
-    @Test
     void create_trimsNameAndSavesEnclosure() {
         when(enclosureRepository.existsByNameIgnoreCase("Savanna 1")).thenReturn(false);
         when(enclosureRepository.save(any(Enclosure.class))).thenAnswer(invocation -> {
@@ -189,7 +81,7 @@ class EnclosureServiceTest {
         when(enclosureRepository.existsByNameIgnoreCase("Savanna 1")).thenReturn(true);
 
         assertThatThrownBy(() -> enclosureService.create(savannaRequest("Savanna 1")))
-                .isInstanceOf(BusinessRuleException.class);
+                .isInstanceOf(EnclosureAlreadyExistsException.class);
         verify(enclosureRepository, never()).save(any());
     }
 
@@ -221,7 +113,7 @@ class EnclosureServiceTest {
         when(enclosureRepository.existsByNameIgnoreCaseAndIdNot("Penguin Pool", 1L)).thenReturn(true);
 
         assertThatThrownBy(() -> enclosureService.update(1L, savannaRequest("Penguin Pool")))
-                .isInstanceOf(BusinessRuleException.class);
+                .isInstanceOf(EnclosureAlreadyExistsException.class);
     }
 
     @Test
@@ -270,7 +162,7 @@ class EnclosureServiceTest {
                 .when(enclosureRepository).flush();
 
         assertThatThrownBy(() -> enclosureService.delete(1L))
-                .isInstanceOf(BusinessRuleException.class)
+                .isInstanceOf(EnclosureNotEmptyException.class)
                 .hasMessage("Enclosure still has animals and cannot be deleted");
     }
 
@@ -319,7 +211,7 @@ class EnclosureServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
 
         assertThatThrownBy(() -> enclosureService.assignKeeper(1L, 1L))
-                .isInstanceOf(BusinessRuleException.class);
+                .isInstanceOf(UserIsNotKeeperException.class);
         verify(keeperAssignmentRepository, never()).save(any());
     }
 
@@ -348,7 +240,7 @@ class EnclosureServiceTest {
         when(keeperAssignmentRepository.existsActiveAssignment(1L, 7L, NOW)).thenReturn(true);
 
         assertThatThrownBy(() -> enclosureService.assignKeeper(1L, 7L))
-                .isInstanceOf(BusinessRuleException.class)
+                .isInstanceOf(KeeperAlreadyAssignedException.class)
                 .hasMessage("Keeper is already assigned to this enclosure");
         verify(keeperAssignmentRepository, never()).save(any());
     }
@@ -372,29 +264,29 @@ class EnclosureServiceTest {
         when(keeperAssignmentRepository.findActive(1L, 7L, NOW)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> enclosureService.unassignKeeper(1L, 7L))
-                .isInstanceOf(ResourceNotFoundException.class);
+                .isInstanceOf(KeeperAssignmentNotFoundException.class);
     }
 
     @Test
-    void update_habitatChangeWithAnimals_throwsBusinessRuleException() {
+    void update_habitatChangeWithAnimals_throwsHabitatLocked() {
         when(enclosureRepository.findById(1L)).thenReturn(Optional.of(existingSavanna()));
         when(enclosureRepository.existsByNameIgnoreCaseAndIdNot("Savanna 1", 1L)).thenReturn(false);
-        when(animalRepository.existsByEnclosureId(1L)).thenReturn(true);
+        when(animalRepository.countByEnclosureId(1L)).thenReturn(1L);
 
         assertThatThrownBy(() -> enclosureService.update(1L,
                 new EnclosureRequest("Savanna 1", HabitatType.ARCTIC, 3)))
-                .isInstanceOf(BusinessRuleException.class);
+                .isInstanceOf(EnclosureHabitatLockedException.class);
     }
 
     @Test
-    void update_capacityBelowAnimalCount_throwsBusinessRuleException() {
+    void update_capacityBelowAnimalCount_throwsCapacityTooLow() {
         when(enclosureRepository.findById(1L)).thenReturn(Optional.of(existingSavanna()));
         when(enclosureRepository.existsByNameIgnoreCaseAndIdNot("Savanna 1", 1L)).thenReturn(false);
         when(animalRepository.countByEnclosureId(1L)).thenReturn(3L);
 
         assertThatThrownBy(() -> enclosureService.update(1L,
                 new EnclosureRequest("Savanna 1", HabitatType.SAVANNA, 2)))
-                .isInstanceOf(BusinessRuleException.class);
+                .isInstanceOf(EnclosureCapacityTooLowException.class);
     }
 
     @Test

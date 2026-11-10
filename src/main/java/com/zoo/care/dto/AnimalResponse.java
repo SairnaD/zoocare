@@ -12,14 +12,11 @@ public record AnimalResponse(
         Long enclosureId,
         String enclosureName,
         LocalDate birthDate,
-        Float weight,
-        Integer size,
-        int feedingInterval,
-        String description,
-        String photo,
-        String healthStatus
+        float weight,
+        int feedingIntervalHours,
+        String description
 ) {
-    public static final String DEFAULT_PHOTO_URL = "/images/no-photo.svg";
+
     public static AnimalResponse from(Animal animal) {
         return new AnimalResponse(
                 animal.getId(),
@@ -30,14 +27,8 @@ public record AnimalResponse(
                 animal.getEnclosure().getName(),
                 animal.getBirthDate(),
                 animal.getWeight(),
-                animal.getSize(),
                 animal.getFeedingIntervalHours(),
-                animal.getDescription(),
-                animal.getPhoto(),
-                animal.getHealthStatus().name()
+                animal.getDescription()
         );
-    }
-    public String photoUrl() {
-        return (photo == null || photo.isEmpty()) ? DEFAULT_PHOTO_URL : "/photos/" + photo;
     }
 }

@@ -4,39 +4,26 @@
 <body>
 <nav th:replace="~{fragments/layout :: navbar}"></nav>
 
-<main class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-12 col-md-10 col-lg-8">
-            <a th:href="@{/admin/animals}" class="btn btn-outline-secondary btn-sm mb-3">&larr; All animals</a>
-            <div class="card">
-                <div class="row g-0">
-                    <div class="col-md-5">
-                        <img th:src="@{${animal.photoUrl()}}"
-                             th:alt="${animal.name()}" class="img-fluid rounded-start w-100 h-100 object-fit-cover">
-                    </div>
-                    <div class="col-md-7">
-                        <div class="card-body">
-                            <h1 class="h3" th:text="${animal.name()}">Leo</h1>
-                            <p class="text-muted" th:text="${animal.description()}">Description</p>
-                            <dl class="row mb-0">
-                                <dt class="col-5">Species</dt>
-                                <dd class="col-7" th:text="${animal.speciesName()}">Lion</dd>
-                                <dt class="col-5">Enclosure</dt>
-                                <dd class="col-7" th:text="${animal.enclosureName()}">Savannah 1</dd>
-                                <dt class="col-5">Birth date</dt>
-                                <dd class="col-7" th:text="${animal.birthDate()}">2020-05-01</dd>
-                                <dt class="col-5">Weight</dt>
-                                <dd class="col-7" th:text="|${animal.weight()} kg|">180.5 kg</dd>
-                                <dt class="col-5">Size</dt>
-                                <dd class="col-7" th:text="|${animal.size()} cm|">120 cm</dd>
-                                <dt class="col-5">Feeding every</dt>
-                                <dd class="col-7" th:text="|${animal.feedingInterval()} h|">6 h</dd>
-                                <dt class="col-5">Health</dt>
-                                <dd class="col-7" th:text="${animal.healthStatus()}">HEALTHY</dd>
-                            </dl>
-                        </div>
-                    </div>
-                </div>
+<main class="container py-4">
+    <div class="zc-form-card">
+        <a th:href="@{/admin/animals}" class="btn btn-outline-secondary btn-sm mb-3">&larr; All animals</a>
+        <div class="card">
+            <div class="card-body">
+                <h1 class="h4" th:text="${animal.name()}">Leo</h1>
+                <p class="text-secondary" th:if="${animal.description() != null}"
+                   th:text="${animal.description()}">Description</p>
+                <dl class="row mb-0">
+                    <dt class="col-5">Species</dt>
+                    <dd class="col-7" th:text="${animal.speciesName()}">Lion</dd>
+                    <dt class="col-5">Enclosure</dt>
+                    <dd class="col-7" th:text="${animal.enclosureName()}">Savanna 1</dd>
+                    <dt class="col-5">Birth date</dt>
+                    <dd class="col-7" th:text="${animal.birthDate()}">2020-05-01</dd>
+                    <dt class="col-5">Weight</dt>
+                    <dd class="col-7" th:text="|${animal.weight()} kg|">180.5 kg</dd>
+                    <dt class="col-5">Feeding every</dt>
+                    <dd class="col-7" th:text="|${animal.feedingIntervalHours()} h|">6 h</dd>
+                </dl>
             </div>
         </div>
     </div>

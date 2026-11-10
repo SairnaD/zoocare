@@ -1,15 +1,12 @@
 package com.zoo.care.controller;
 
 import com.zoo.care.config.SecurityConfig;
-import com.zoo.care.config.WebConfig;
 import com.zoo.care.dto.AnimalResponse;
 import com.zoo.care.exception.ResourceNotFoundException;
 import com.zoo.care.service.AnimalService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -26,13 +23,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = AnimalApiController.class,
-        excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = WebConfig.class))
+@WebMvcTest(AnimalApiController.class)
 @Import(SecurityConfig.class)
 class AnimalApiControllerTest {
 
     private static final AnimalResponse LEO = new AnimalResponse(1L, "Leo", 1L, "Lion", 2L, "Savannah",
-            LocalDate.of(2020, 5, 1), 180.5f, 120, 6, "A lion", "abc.png", "HEALTHY");
+            LocalDate.of(2020, 5, 1), 180.5f, 6, "A lion");
 
     @Autowired
     MockMvc mockMvc;
@@ -50,7 +46,7 @@ class AnimalApiControllerTest {
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$[0].name").value("Leo"))
                 .andExpect(jsonPath("$[0].speciesName").value("Lion"))
-                .andExpect(jsonPath("$[0].feedingInterval").value(6));
+                .andExpect(jsonPath("$[0].feedingIntervalHours").value(6));
     }
 
     @Test

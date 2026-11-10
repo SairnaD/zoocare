@@ -4,6 +4,8 @@ import com.zoo.care.dto.RegisterRequest;
 import com.zoo.care.entity.Role;
 import com.zoo.care.entity.User;
 import com.zoo.care.exception.BusinessRuleException;
+import com.zoo.care.exception.EmailAlreadyRegisteredException;
+import com.zoo.care.exception.UsernameAlreadyTakenException;
 import com.zoo.care.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,10 +25,10 @@ public class UserService {
     @Transactional
     public User register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.username())) {
-            throw new BusinessRuleException("Username already taken");
+            throw new UsernameAlreadyTakenException();
         }
         if (userRepository.existsByEmail(request.email())) {
-            throw new BusinessRuleException("Email already registered");
+            throw new EmailAlreadyRegisteredException();
         }
 
         User user = User.builder()

@@ -4,7 +4,7 @@ import com.zoo.care.config.SecurityConfig;
 import com.zoo.care.dto.EnclosureRequest;
 import com.zoo.care.dto.EnclosureResponse;
 import com.zoo.care.entity.HabitatType;
-import com.zoo.care.exception.BusinessRuleException;
+import com.zoo.care.exception.*;
 import com.zoo.care.service.EnclosureService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -89,7 +89,7 @@ class EnclosurePageControllerTest {
     @Test
     void create_duplicateName_showsErrorUnderName() throws Exception {
         when(enclosureService.create(any(EnclosureRequest.class)))
-                .thenThrow(new BusinessRuleException("Enclosure with name 'Savanna 1' already exists"));
+                .thenThrow(new EnclosureAlreadyExistsException("Savanna 1"));
 
         mockMvc.perform(post("/admin/enclosures")
                         .with(csrf())
@@ -159,7 +159,7 @@ class EnclosurePageControllerTest {
     @Test
     void update_duplicateName_showsErrorUnderName() throws Exception {
         when(enclosureService.update(eq(1L), any(EnclosureRequest.class)))
-                .thenThrow(new BusinessRuleException("Enclosure with name 'Savanna 1' already exists"));
+                .thenThrow(new EnclosureAlreadyExistsException("Savanna 1"));
 
         mockMvc.perform(post("/admin/enclosures/1")
                         .with(csrf())
@@ -173,7 +173,7 @@ class EnclosurePageControllerTest {
 
     @Test
     void delete_enclosureWithAnimals_redirectsWithErrorMessage() throws Exception {
-        doThrow(new BusinessRuleException("Enclosure still has animals and cannot be deleted"))
+        doThrow(new EnclosureNotEmptyException())
                 .when(enclosureService).delete(1L);
 
         mockMvc.perform(post("/admin/enclosures/1/delete").with(csrf()))
@@ -208,7 +208,7 @@ class EnclosurePageControllerTest {
     void assignKeeper_businessRuleError_showsGlobalError() throws Exception {
         when(enclosureService.findById(1L)).thenReturn(SAVANNA);
         when(enclosureService.assignKeeper(1L, 7L))
-                .thenThrow(new BusinessRuleException("Keeper is already assigned to this enclosure"));
+                .thenThrow(new KeeperAlreadyAssignedException());
 
         mockMvc.perform(post("/admin/enclosures/1/keepers").with(csrf()).param("keeperId", "7"))
                 .andExpect(status().isOk())
@@ -222,5 +222,35 @@ class EnclosurePageControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/enclosures/1/keepers"));
         verify(enclosureService).unassignKeeper(1L, 7L);
+    }
+
+    @Test
+    void update_habitatLocked_showsErrorUnderHabitat() throws Exception {
+        when(enclosureService.update(eq(1L), any(EnclosureRequest.class)))
+                .thenThrow(new EnclosureHabitatLockedException());
+
+        mockMvc.perform(post("/admin/enclosures/1")
+                        .with(csrf())
+                        .param("name", "Savanna 1")
+                        .param("habitatType", "ARCTIC")
+                        .param("capacity", "3"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/enclosure/form"))
+                .andExpect(model().attributeHasFieldErrors("enclosureRequest", "habitatType"));
+    }
+
+    @Test
+    void update_capacityTooLow_showsErrorUnderCapacity() throws Exception {
+        when(enclosureService.update(eq(1L), any(EnclosureRequest.class)))
+                .thenThrow(new EnclosureCapacityTooLowException(3));
+
+        mockMvc.perform(post("/admin/enclosures/1")
+                        .with(csrf())
+                        .param("name", "Savanna 1")
+                        .param("habitatType", "SAVANNA")
+                        .param("capacity", "2"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/enclosure/form"))
+                .andExpect(model().attributeHasFieldErrors("enclosureRequest", "capacity"));
     }
 }

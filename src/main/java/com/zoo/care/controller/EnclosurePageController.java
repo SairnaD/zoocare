@@ -4,7 +4,7 @@ import com.zoo.care.dto.EnclosureRequest;
 import com.zoo.care.dto.EnclosureResponse;
 import com.zoo.care.dto.KeeperAssignmentRequest;
 import com.zoo.care.entity.HabitatType;
-import com.zoo.care.exception.BusinessRuleException;
+import com.zoo.care.exception.*;
 import com.zoo.care.service.EnclosureService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -56,7 +56,7 @@ public class EnclosurePageController {
         }
         try {
             enclosureService.create(request);
-        } catch (BusinessRuleException ex) {
+        } catch (EnclosureAlreadyExistsException ex) {
             bindingResult.rejectValue("name", "duplicate", ex.getMessage());
             return FORM_VIEW;
         }
@@ -85,8 +85,16 @@ public class EnclosurePageController {
         }
         try {
             enclosureService.update(id, request);
-        } catch (BusinessRuleException ex) {
+        } catch (EnclosureAlreadyExistsException ex) {
             bindingResult.rejectValue("name", "duplicate", ex.getMessage());
+            model.addAttribute("enclosureId", id);
+            return FORM_VIEW;
+        } catch (EnclosureHabitatLockedException ex) {
+            bindingResult.rejectValue("habitatType", "locked", ex.getMessage());
+            model.addAttribute("enclosureId", id);
+            return FORM_VIEW;
+        } catch (EnclosureCapacityTooLowException ex) {
+            bindingResult.rejectValue("capacity", "tooLow", ex.getMessage());
             model.addAttribute("enclosureId", id);
             return FORM_VIEW;
         }
@@ -99,7 +107,7 @@ public class EnclosurePageController {
         try {
             enclosureService.delete(id);
             redirectAttributes.addFlashAttribute("successMessage", "Enclosure deleted");
-        } catch (BusinessRuleException ex) {
+        } catch (EnclosureNotEmptyException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
         }
         return REDIRECT_TO_LIST;
@@ -124,7 +132,7 @@ public class EnclosurePageController {
         }
         try {
             enclosureService.assignKeeper(id, request.keeperId());
-        } catch (BusinessRuleException ex) {
+        } catch (UserIsNotKeeperException | KeeperAlreadyAssignedException ex) {
             bindingResult.reject("assign.failed", ex.getMessage());
             fillKeepersPage(model, id);
             return KEEPERS_VIEW;

@@ -4,108 +4,97 @@
 <body>
 <nav th:replace="~{fragments/layout :: navbar}"></nav>
 
-<main class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-12 col-sm-10 col-md-8 col-lg-6">
-            <h1 class="h3 mb-4">New animal</h1>
+<main class="container py-4">
+    <form th:action="@{/admin/animals}" th:object="${animalRequest}" method="post" novalidate
+          class="card zc-form-card">
 
-            <form th:action="@{/admin/animals}" th:object="${animalRequest}" method="post"
-                  enctype="multipart/form-data" novalidate>
+        <div class="card-header bg-transparent py-3">
+            <h1 class="h5 mb-0">New animal</h1>
+        </div>
 
-                <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger">
-                    <p th:each="error : ${#fields.globalErrors()}" th:text="${error}" class="mb-0">Error</p>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="name" class="form-label fw-semibold">Name</label>
+                <input type="text" th:field="*{name}" th:errorclass="is-invalid" class="form-control">
+                <div th:if="${#fields.hasErrors('name')}" class="invalid-feedback d-flex gap-1">
+                    <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+                    <span th:errors="*{name}">Name error</span>
                 </div>
+            </div>
 
-                <div class="mb-3">
-                    <label for="name" class="form-label">Name</label>
-                    <input type="text" th:field="*{name}" th:errorclass="is-invalid" class="form-control">
-                    <div th:if="${#fields.hasErrors('name')}" th:errors="*{name}"
-                         class="invalid-feedback">Name error</div>
+            <div class="mb-3">
+                <label for="speciesId" class="form-label fw-semibold">Species</label>
+                <select th:field="*{speciesId}" th:errorclass="is-invalid" class="form-select">
+                    <option value="">Choose species...</option>
+                    <option th:each="species : ${speciesList}" th:value="${species.id()}"
+                            th:text="|${species.name()} (${species.habitatType()})|">Lion (SAVANNA)</option>
+                </select>
+                <div th:if="${#fields.hasErrors('speciesId')}" class="invalid-feedback d-flex gap-1">
+                    <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+                    <span th:errors="*{speciesId}">Species error</span>
                 </div>
+            </div>
 
-                <div class="mb-3">
-                    <label for="speciesId" class="form-label">Species</label>
-                    <select th:field="*{speciesId}" th:errorclass="is-invalid" class="form-select">
-                        <option value="">Choose species...</option>
-                        <option th:each="species : ${speciesList}" th:value="${species.id()}"
-                                th:text="|${species.name()} (${species.habitatType()})|">Lion (SAVANNA)</option>
-                    </select>
-                    <div th:if="${#fields.hasErrors('speciesId')}" th:errors="*{speciesId}"
-                         class="invalid-feedback">Species error</div>
+            <div class="mb-3">
+                <label for="enclosureId" class="form-label fw-semibold">Enclosure</label>
+                <select th:field="*{enclosureId}" th:errorclass="is-invalid" class="form-select">
+                    <option value="">Choose enclosure...</option>
+                    <option th:each="enclosure : ${enclosures}" th:value="${enclosure.id()}"
+                            th:text="|${enclosure.name()} (${enclosure.habitatType()}, capacity ${enclosure.capacity()})|">Savanna 1</option>
+                </select>
+                <div class="form-text">The habitat of the enclosure must match the habitat of the species.</div>
+                <div th:if="${#fields.hasErrors('enclosureId')}" class="invalid-feedback d-flex gap-1">
+                    <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+                    <span th:errors="*{enclosureId}">Enclosure error</span>
                 </div>
+            </div>
 
-                <div class="mb-3">
-                    <label for="enclosureId" class="form-label">Enclosure</label>
-                    <select th:field="*{enclosureId}" th:errorclass="is-invalid" class="form-select">
-                        <option value="">Choose enclosure...</option>
-                        <option th:each="enclosure : ${enclosures}" th:value="${enclosure.id()}"
-                                th:text="|${enclosure.name()} (${enclosure.habitatType()}, capacity ${enclosure.capacity()})|">Savannah 1</option>
-                    </select>
-                    <div class="form-text">The habitat of the enclosure must match the habitat of the species.</div>
-                    <div th:if="${#fields.hasErrors('enclosureId')}" th:errors="*{enclosureId}"
-                         class="invalid-feedback">Enclosure error</div>
+            <div class="mb-3">
+                <label for="birthDate" class="form-label fw-semibold">Birth date</label>
+                <input type="date" th:field="*{birthDate}" th:errorclass="is-invalid" class="form-control">
+                <div th:if="${#fields.hasErrors('birthDate')}" class="invalid-feedback d-flex gap-1">
+                    <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+                    <span th:errors="*{birthDate}">Birth date error</span>
                 </div>
+            </div>
 
-                <div class="mb-3">
-                    <label for="birthDate" class="form-label">Birth date</label>
-                    <input type="date" th:field="*{birthDate}" th:errorclass="is-invalid" class="form-control">
-                    <div th:if="${#fields.hasErrors('birthDate')}" th:errors="*{birthDate}"
-                         class="invalid-feedback">Birth date error</div>
-                </div>
-
-                <div class="row">
-                    <div class="col-6 mb-3">
-                        <label for="weight" class="form-label">Weight (kg)</label>
-                        <input type="number" step="0.1" min="0" th:field="*{weight}" th:errorclass="is-invalid"
-                               class="form-control">
-                        <div th:if="${#fields.hasErrors('weight')}" th:errors="*{weight}"
-                             class="invalid-feedback">Weight error</div>
+            <div class="row g-3 mb-3">
+                <div class="col-sm-6">
+                    <label for="weight" class="form-label fw-semibold">Weight (kg)</label>
+                    <input type="number" step="0.1" min="0" th:field="*{weight}" th:errorclass="is-invalid"
+                           class="form-control">
+                    <div th:if="${#fields.hasErrors('weight')}" class="invalid-feedback d-flex gap-1">
+                        <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+                        <span th:errors="*{weight}">Weight error</span>
                     </div>
-                    <div class="col-6 mb-3">
-                        <label for="size" class="form-label">Size (cm)</label>
-                        <input type="number" min="1" th:field="*{size}" th:errorclass="is-invalid"
-                               class="form-control">
-                        <div th:if="${#fields.hasErrors('size')}" th:errors="*{size}"
-                             class="invalid-feedback">Size error</div>
-                    </div>
                 </div>
-
-                <div class="mb-3">
-                    <label for="feedingIntervalHours" class="form-label">Feeding interval (hours)</label>
+                <div class="col-sm-6">
+                    <label for="feedingIntervalHours" class="form-label fw-semibold">Feeding interval (hours)</label>
                     <input type="number" min="1" max="720" th:field="*{feedingIntervalHours}"
                            th:errorclass="is-invalid" class="form-control">
-                    <div th:if="${#fields.hasErrors('feedingIntervalHours')}" th:errors="*{feedingIntervalHours}"
-                         class="invalid-feedback">Interval error</div>
-                </div>
-
-                <div class="mb-3">
-                    <label for="description" class="form-label">Description (optional)</label>
-                    <textarea rows="3" th:field="*{description}" th:errorclass="is-invalid"
-                              class="form-control"></textarea>
-                    <div th:if="${#fields.hasErrors('description')}" th:errors="*{description}"
-                         class="invalid-feedback">Description error</div>
-                </div>
-
-                <div class="mb-4">
-                    <label for="photo" class="form-label">Photo</label>
-                    <input id="photo" type="file" name="photo" class="form-control"
-                           th:classappend="${#fields.hasErrors('photo')} ? 'is-invalid'"
-                           accept="image/jpeg,image/png,image/webp,image/gif">
-                    <div class="form-text">JPG, PNG, WebP or GIF, up to 5 MB.</div>
-                    <div th:if="${pendingPhoto != null}" class="form-text text-success">
-                        Photo already uploaded. Choose a new file only if you want to replace it.
+                    <div th:if="${#fields.hasErrors('feedingIntervalHours')}" class="invalid-feedback d-flex gap-1">
+                        <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+                        <span th:errors="*{feedingIntervalHours}">Interval error</span>
                     </div>
-                    <div th:if="${#fields.hasErrors('photo')}" th:errors="*{photo}"
-                         class="invalid-feedback">Photo error</div>
                 </div>
+            </div>
 
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-success">Save</button>
-                    <a th:href="@{/admin/animals}" class="btn btn-outline-secondary">Cancel</a>
+            <div>
+                <label for="description" class="form-label fw-semibold">Description (optional)</label>
+                <textarea rows="3" th:field="*{description}" th:errorclass="is-invalid"
+                          class="form-control"></textarea>
+                <div th:if="${#fields.hasErrors('description')}" class="invalid-feedback d-flex gap-1">
+                    <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+                    <span th:errors="*{description}">Description error</span>
                 </div>
-            </form>
+            </div>
         </div>
-    </div>
+
+        <div class="card-footer bg-transparent d-flex justify-content-end gap-2 py-3">
+            <a th:href="@{/admin/animals}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+    </form>
 </main>
 
 <th:block th:replace="~{fragments/layout :: scripts}"></th:block>

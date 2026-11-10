@@ -3,7 +3,8 @@ package com.zoo.care.service;
 import com.zoo.care.dto.RegisterRequest;
 import com.zoo.care.entity.Role;
 import com.zoo.care.entity.User;
-import com.zoo.care.exception.BusinessRuleException;
+import com.zoo.care.exception.EmailAlreadyRegisteredException;
+import com.zoo.care.exception.UsernameAlreadyTakenException;
 import com.zoo.care.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,7 +37,7 @@ class UserServiceTest {
     @Test
     void register_takenUsernameThrowsException() {
         when(userRepository.existsByUsername("Ben")).thenReturn(true);
-        BusinessRuleException e = assertThrows(BusinessRuleException.class,
+        UsernameAlreadyTakenException e = assertThrows(UsernameAlreadyTakenException.class,
                 () -> userService.register(request));
 
         assertEquals("Username already taken", e.getMessage());
@@ -49,7 +50,7 @@ class UserServiceTest {
         when(userRepository.existsByUsername("Ben")).thenReturn(false);
         when(userRepository.existsByEmail("ben@test.com")).thenReturn(true);
 
-        BusinessRuleException e = assertThrows(BusinessRuleException.class,
+        EmailAlreadyRegisteredException e = assertThrows(EmailAlreadyRegisteredException.class,
                 () -> userService.register(request));
 
         assertEquals("Email already registered", e.getMessage());

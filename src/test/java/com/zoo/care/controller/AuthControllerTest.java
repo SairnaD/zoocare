@@ -3,6 +3,8 @@ package com.zoo.care.controller;
 import com.zoo.care.config.SecurityConfig;
 import com.zoo.care.dto.RegisterRequest;
 import com.zoo.care.exception.BusinessRuleException;
+import com.zoo.care.exception.EmailAlreadyRegisteredException;
+import com.zoo.care.exception.UsernameAlreadyTakenException;
 import com.zoo.care.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -99,15 +101,28 @@ class AuthControllerTest {
     }
 
     @Test
-    void postRegister_takenUsernameShowsFormWithError() throws Exception {
-        when(userService.register(any())).thenThrow(new BusinessRuleException("Username already taken"));
+    void postRegister_takenUsernameShowsErrorUnderUsername() throws Exception {
+        when(userService.register(any())).thenThrow(new UsernameAlreadyTakenException());
         mockMvc.perform(post("/register")
                         .with(csrf())
                         .param("username", "Ben")
                         .param("password", "password123")
                         .param("email", "ben@test.com")
                         .param("fullName", "Ben Ten"))
-                .andExpect(model().attributeHasErrors("registerRequest"))
+                .andExpect(model().attributeHasFieldErrors("registerRequest", "username"))
+                .andExpect(view().name("register"));
+    }
+
+    @Test
+    void postRegister_takenEmailShowsErrorUnderEmail() throws Exception {
+        when(userService.register(any())).thenThrow(new EmailAlreadyRegisteredException());
+        mockMvc.perform(post("/register")
+                        .with(csrf())
+                        .param("username", "Ben")
+                        .param("password", "password123")
+                        .param("email", "ben@test.com")
+                        .param("fullName", "Ben Ten"))
+                .andExpect(model().attributeHasFieldErrors("registerRequest", "email"))
                 .andExpect(view().name("register"));
     }
 }

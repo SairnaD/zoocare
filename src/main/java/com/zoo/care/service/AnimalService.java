@@ -4,9 +4,10 @@ import com.zoo.care.dto.AnimalRequest;
 import com.zoo.care.dto.AnimalResponse;
 import com.zoo.care.entity.Animal;
 import com.zoo.care.entity.Enclosure;
-import com.zoo.care.entity.HealthStatus;
 import com.zoo.care.entity.Species;
-import com.zoo.care.exception.BusinessRuleException;
+import com.zoo.care.exception.AnimalAlreadyExistsException;
+import com.zoo.care.exception.EnclosureFullException;
+import com.zoo.care.exception.HabitatMismatchException;
 import com.zoo.care.exception.ResourceNotFoundException;
 import com.zoo.care.repository.AnimalRepository;
 import com.zoo.care.repository.EnclosureRepository;
@@ -41,10 +42,10 @@ public class AnimalService {
     }
 
     @Transactional
-    public AnimalResponse create(AnimalRequest request, String photoFile) {
+    public AnimalResponse create(AnimalRequest request) {
         String name = request.name().trim();
         if (animalRepository.existsByNameIgnoreCase(name)) {
-            throw new BusinessRuleException("Animal with name '" + name + "' already exists");
+            throw new AnimalAlreadyExistsException(name);
         }
         Species species = speciesRepository.findById(request.speciesId())
                 .orElseThrow(() -> new ResourceNotFoundException("Species", request.speciesId()));
@@ -58,11 +59,8 @@ public class AnimalService {
                 .enclosure(enclosure)
                 .birthDate(request.birthDate())
                 .weight(request.weight())
-                .size(request.size())
                 .feedingIntervalHours(request.feedingIntervalHours())
                 .description(request.description())
-                .photo(photoFile)
-                .healthStatus(HealthStatus.HEALTHY)
                 .build());
         log.info("Registered animal '{}' (id={}) in enclosure '{}'",
                 saved.getName(), saved.getId(), enclosure.getName());
@@ -71,11 +69,10 @@ public class AnimalService {
 
     private void checkPlacement(Species species, Enclosure enclosure) {
         if (species.getHabitatType() != enclosure.getHabitatType()) {
-            throw new BusinessRuleException("Habitat of species '" + species.getName()
-                    + "' does not match enclosure '" + enclosure.getName() + "'");
+            throw new HabitatMismatchException(species.getName(), enclosure.getName());
         }
         if (animalRepository.countByEnclosureId(enclosure.getId()) >= enclosure.getCapacity()) {
-            throw new BusinessRuleException("Enclosure '" + enclosure.getName() + "' is full");
+            throw new EnclosureFullException(enclosure.getName());
         }
     }
 }

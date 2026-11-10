@@ -12,7 +12,8 @@ public class OpenApiConfig {
     OpenAPI zooCareOpenApi() {
         return new OpenAPI().info(new Info()
                 .title("ZooCare API")
-                .description("REST API for managing species, enclosures, animals and feedings")
+                .description("REST API for species, enclosures, keepers and animals. "
+                        + "Every error returns one JSON body: timestamp, status, error, message, path, fieldErrors.")
                 .version("1.0"));
     }
 }
