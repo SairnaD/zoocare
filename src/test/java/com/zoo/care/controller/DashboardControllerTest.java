@@ -22,10 +22,10 @@ class DashboardControllerTest {
 
     @Test
     @WithMockUser(roles = "ADMIN")
-    void dashboard_adminIsRedirectedToAdminPage() throws Exception {
+    void dashboard_adminIsRedirectedToEnclosures() throws Exception {
         mockMvc.perform(get("/dashboard"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin"));
+                .andExpect(redirectedUrl("/admin/enclosures"));
     }
 
     @Test
@@ -44,17 +44,9 @@ class DashboardControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
-    void adminPage_adminSeesAdminDashboard() throws Exception {
-        mockMvc.perform(get("/admin"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("admin/dashboard"));
-    }
-
-    @Test
     @WithMockUser(roles = "KEEPER")
-    void adminPage_keeperIsForbidden() throws Exception {
-        mockMvc.perform(get("/admin"))
+    void adminArea_keeperIsForbidden() throws Exception {
+        mockMvc.perform(get("/admin/enclosures"))
                 .andExpect(status().isForbidden());
     }
 

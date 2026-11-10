@@ -1,34 +1,43 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head('Login')}"></head>
-<body>
-<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<body class="d-flex flex-column min-vh-100">
+<header th:replace="~{fragments/layout :: authHeader}"></header>
 
-<main class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-12 col-sm-10 col-md-6 col-lg-4">
-            <h1 class="h3 mb-4 text-center">Log in</h1>
+<main class="container flex-grow-1 d-flex align-items-center justify-content-center py-5">
+    <div class="card p-4 zc-auth-card w-100">
+        <h1 class="h3 mb-4">Log in</h1>
 
-            <div th:if="${param.error}" class="alert alert-danger">Invalid username or password.</div>
-            <div th:if="${param.logout}" class="alert alert-success">You have been logged out.</div>
-            <div th:if="${param.registered}" class="alert alert-success">Registration successful. Please log in.</div>
-
-            <form th:action="@{/login}" method="post">
-                <div class="mb-3">
-                    <label for="username" class="form-label">Username</label>
-                    <input type="text" id="username" name="username" class="form-control"
-                           autocomplete="username" required autofocus>
-                </div>
-                <div class="mb-3">
-                    <label for="password" class="form-label">Password</label>
-                    <input type="password" id="password" name="password" class="form-control"
-                           autocomplete="current-password" required>
-                </div>
-                <button type="submit" class="btn btn-success w-100">Log in</button>
-            </form>
-
-            <p class="text-center mt-3">No account? <a th:href="@{/register}">Register</a></p>
+        <div th:if="${param.error}" class="alert alert-danger d-flex align-items-start gap-2" role="alert">
+            <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+            <span>Invalid username or password.</span>
         </div>
+        <div th:if="${param.logout}" class="alert alert-success d-flex align-items-start gap-2" role="status">
+            <i class="bi bi-check-lg" aria-hidden="true"></i>
+            <span>You have been logged out.</span>
+        </div>
+        <div th:if="${param.registered}" class="alert alert-success d-flex align-items-start gap-2" role="status">
+            <i class="bi bi-check-lg" aria-hidden="true"></i>
+            <span>Registration successful. Please log in.</span>
+        </div>
+
+        <form th:action="@{/login}" method="post">
+            <div class="mb-3">
+                <label for="username" class="form-label fw-semibold">Username</label>
+                <input type="text" id="username" name="username" class="form-control"
+                       autocomplete="username" required autofocus>
+            </div>
+            <div class="mb-4">
+                <label for="password" class="form-label fw-semibold">Password</label>
+                <input type="password" id="password" name="password" class="form-control"
+                       autocomplete="current-password" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Log in</button>
+        </form>
+
+        <p class="text-center small mb-0 mt-4 pt-3 border-top">
+            No account? <a th:href="@{/register}" class="fw-semibold">Register</a>
+        </p>
     </div>
 </main>
 

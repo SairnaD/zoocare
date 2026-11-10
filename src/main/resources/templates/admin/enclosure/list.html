@@ -5,46 +5,62 @@
 <nav th:replace="~{fragments/layout :: navbar}"></nav>
 
 <main class="container py-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
         <h1 class="h3 mb-0">Enclosures</h1>
-        <a th:href="@{/admin/enclosures/new}" class="btn btn-success">Add enclosure</a>
+        <a th:href="@{/admin/enclosures/new}" class="btn btn-primary">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i> Add enclosure
+        </a>
     </div>
 
-    <div th:if="${successMessage}" th:text="${successMessage}" class="alert alert-success">Saved</div>
-    <div th:if="${errorMessage}" th:text="${errorMessage}" class="alert alert-danger">Error</div>
+    <th:block th:replace="~{fragments/layout :: alerts}"></th:block>
 
-    <p th:if="${#lists.isEmpty(enclosures)}" class="text-muted">No enclosures yet.</p>
+    <div th:if="${#lists.isEmpty(enclosures)}" class="card zc-empty">
+        <span class="zc-empty-icon" aria-hidden="true"><i class="bi bi-window-sidebar"></i></span>
+        <h2 class="h5 mb-1">No enclosures yet</h2>
+        <p class="text-secondary mb-0">Create an enclosure, then add animals and assign a keeper.</p>
+    </div>
 
-    <div th:unless="${#lists.isEmpty(enclosures)}" class="table-responsive">
-        <table class="table table-striped align-middle">
-            <thead>
-            <tr>
-                <th scope="col">Name</th>
-                <th scope="col">Habitat</th>
-                <th scope="col">Capacity</th>
-                <th scope="col" class="text-end">Actions</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="enclosure : ${enclosures}">
-                <td th:text="${enclosure.name}">Savanna 1</td>
-                <td th:text="${enclosure.habitatType}">SAVANNA</td>
-                <td th:text="${enclosure.capacity}">3</td>
-                <td class="text-end">
-                    <div class="d-inline-flex gap-2">
-                        <a th:href="@{/admin/enclosures/{id}/keepers(id=${enclosure.id})}"
-                           class="btn btn-outline-success btn-sm">Keepers</a>
-                        <a th:href="@{/admin/enclosures/{id}/edit(id=${enclosure.id})}"
-                           class="btn btn-outline-secondary btn-sm">Edit</a>
-                        <form th:action="@{/admin/enclosures/{id}/delete(id=${enclosure.id})}" method="post"
-                              onsubmit="return confirm('Delete this enclosure?');">
-                            <button type="submit" class="btn btn-outline-danger btn-sm">Delete</button>
-                        </form>
-                    </div>
-                </td>
-            </tr>
-            </tbody>
-        </table>
+    <div th:unless="${#lists.isEmpty(enclosures)}" class="card overflow-hidden">
+        <div class="card-header bg-transparent py-3">
+            <h2 class="h5 mb-0">All enclosures
+                <span class="text-secondary fw-medium" th:text="|(${#lists.size(enclosures)})|">(6)</span>
+            </h2>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Habitat</th>
+                    <th scope="col">Capacity</th>
+                    <th scope="col" class="text-end">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="enclosure : ${enclosures}">
+                    <td class="fw-semibold" th:text="${enclosure.name}">Savanna 1</td>
+                    <td>
+                        <span class="chip"
+                              th:classappend="|chip-${#strings.toLowerCase(enclosure.habitatType)}|"
+                              th:text="${#strings.capitalize(#strings.toLowerCase(enclosure.habitatType))}">Savanna</span>
+                    </td>
+                    <td th:text="|${enclosure.capacity} animals|">3 animals</td>
+                    <td class="text-end">
+                        <div class="d-inline-flex gap-2">
+                            <a th:href="@{/admin/enclosures/{id}/keepers(id=${enclosure.id})}"
+                               class="btn btn-outline-secondary btn-sm">Keepers</a>
+                            <a th:href="@{/admin/enclosures/{id}/edit(id=${enclosure.id})}"
+                               class="btn btn-outline-secondary btn-sm">Edit</a>
+                            <form th:action="@{/admin/enclosures/{id}/delete(id=${enclosure.id})}" method="post"
+                                  onsubmit="return confirm('Delete this enclosure?');">
+                                <button type="submit" class="btn btn-outline-danger btn-sm">Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </main>
 

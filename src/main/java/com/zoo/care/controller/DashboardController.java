@@ -11,17 +11,12 @@ public class DashboardController {
     public String dashboardPage(Authentication authentication) {
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
-        return isAdmin ? "redirect:/admin" : "redirect:/keeper";
+        return isAdmin ? "redirect:/admin/enclosures" : "redirect:/keeper";
     }
 
     @GetMapping("/keeper")
     public String keeperDashboardPage() {
         return "keeper/dashboard";
-    }
-
-    @GetMapping("/admin")
-    public String adminDashboardPage() {
-        return "admin/dashboard";
     }
 
     @GetMapping("/access-denied")
