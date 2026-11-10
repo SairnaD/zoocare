@@ -4,7 +4,9 @@ import com.zoo.care.config.SecurityConfig;
 import com.zoo.care.dto.SpeciesResponse;
 import com.zoo.care.entity.DietType;
 import com.zoo.care.entity.HabitatType;
-import com.zoo.care.exception.BusinessRuleException;
+import com.zoo.care.exception.SpeciesAlreadyExistsException;
+import com.zoo.care.exception.SpeciesHabitatLockedException;
+import com.zoo.care.exception.SpeciesInUseException;
 import com.zoo.care.service.SpeciesService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -106,7 +108,7 @@ class SpeciesPageControllerTest {
     @WithMockUser(roles = "ADMIN")
     void create_duplicateNameShowsFieldError() throws Exception {
         when(speciesService.create(any()))
-                .thenThrow(new BusinessRuleException("Species with name 'Lion' already exists"));
+                .thenThrow(new SpeciesAlreadyExistsException("Lion"));
 
         mockMvc.perform(post("/admin/species")
                         .with(csrf())
@@ -159,12 +161,27 @@ class SpeciesPageControllerTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     void delete_speciesInUseRedirectsWithErrorMessage() throws Exception {
-        doThrow(new BusinessRuleException("Species is in use and cannot be deleted"))
+        doThrow(new SpeciesInUseException())
                 .when(speciesService).delete(1L);
 
         mockMvc.perform(post("/admin/species/1/delete").with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/species"))
                 .andExpect(flash().attribute("errorMessage", "Species is in use and cannot be deleted"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void update_habitatLocked_showsErrorUnderHabitat() throws Exception {
+        when(speciesService.update(eq(1L), any())).thenThrow(new SpeciesHabitatLockedException());
+
+        mockMvc.perform(post("/admin/species/1")
+                        .with(csrf())
+                        .param("name", "Lion")
+                        .param("habitatType", "JUNGLE")
+                        .param("dietType", "CARNIVORE"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/species/form"))
+                .andExpect(model().attributeHasFieldErrors("speciesRequest", "habitatType"));
     }
 }

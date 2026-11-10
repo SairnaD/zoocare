@@ -1,7 +1,8 @@
 package com.zoo.care.controller;
 
 import com.zoo.care.dto.RegisterRequest;
-import com.zoo.care.exception.BusinessRuleException;
+import com.zoo.care.exception.EmailAlreadyRegisteredException;
+import com.zoo.care.exception.UsernameAlreadyTakenException;
 import com.zoo.care.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -37,8 +38,11 @@ public class AuthController {
         try {
             userService.register(regRequest);
             return "redirect:/login?registered";
-        } catch (BusinessRuleException e) {
-            binResult.reject("duplicate", e.getMessage());
+        } catch (UsernameAlreadyTakenException e) {
+            binResult.rejectValue("username", "duplicate", e.getMessage());
+            return "register";
+        } catch (EmailAlreadyRegisteredException e) {
+            binResult.rejectValue("email", "duplicate", e.getMessage());
             return "register";
         }
     }

@@ -5,44 +5,51 @@
 <nav th:replace="~{fragments/layout :: navbar}"></nav>
 
 <main class="container py-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
         <h1 class="h3 mb-0">Animals</h1>
-        <a th:href="@{/admin/animals/new}" class="btn btn-success">Add animal</a>
+        <a th:href="@{/admin/animals/new}" class="btn btn-primary">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i> Add animal
+        </a>
     </div>
 
-    <div th:if="${successMessage}" th:text="${successMessage}" class="alert alert-success">Saved</div>
+    <th:block th:replace="~{fragments/layout :: alerts}"></th:block>
 
-    <p th:if="${#lists.isEmpty(animals)}" class="text-muted">No animals yet.</p>
+    <div th:if="${#lists.isEmpty(animals)}" class="card zc-empty">
+        <span class="zc-empty-icon" aria-hidden="true"><i class="bi bi-heart"></i></span>
+        <h2 class="h5 mb-1">No animals yet</h2>
+        <p class="text-secondary mb-0">Create a species and an enclosure first, then register an animal.</p>
+    </div>
 
-    <div th:unless="${#lists.isEmpty(animals)}" class="table-responsive">
-        <table class="table table-striped align-middle">
-            <thead>
-            <tr>
-                <th scope="col">Photo</th>
-                <th scope="col">Name</th>
-                <th scope="col">Species</th>
-                <th scope="col">Enclosure</th>
-                <th scope="col">Birth date</th>
-                <th scope="col">Feeding every</th>
-                <th scope="col">Health</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="animal : ${animals}">
-                <td>
-                    <img th:src="@{${animal.photoUrl()}}"
-                         th:alt="${animal.name()}" class="rounded" width="48" height="48"
-                         style="object-fit: cover">
-                </td>
-                <td><a th:href="@{/admin/animals/{id}(id=${animal.id()})}" th:text="${animal.name()}">Leo</a></td>
-                <td th:text="${animal.speciesName()}">Lion</td>
-                <td th:text="${animal.enclosureName()}">Savannah</td>
-                <td th:text="${animal.birthDate()}">2020-05-01</td>
-                <td th:text="|${animal.feedingInterval()} h|">6 h</td>
-                <td th:text="${animal.healthStatus()}">HEALTHY</td>
-            </tr>
-            </tbody>
-        </table>
+    <div th:unless="${#lists.isEmpty(animals)}" class="card overflow-hidden">
+        <div class="card-header bg-transparent py-3">
+            <h2 class="h5 mb-0">All animals
+                <span class="text-secondary fw-medium" th:text="|(${#lists.size(animals)})|">(6)</span>
+            </h2>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Species</th>
+                    <th scope="col">Enclosure</th>
+                    <th scope="col">Birth date</th>
+                    <th scope="col">Feeding every</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="animal : ${animals}">
+                    <td class="fw-semibold">
+                        <a th:href="@{/admin/animals/{id}(id=${animal.id()})}" th:text="${animal.name()}">Leo</a>
+                    </td>
+                    <td th:text="${animal.speciesName()}">Lion</td>
+                    <td th:text="${animal.enclosureName()}">Savanna 1</td>
+                    <td th:text="${animal.birthDate()}">2020-05-01</td>
+                    <td th:text="|${animal.feedingIntervalHours()} h|">6 h</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </main>
 

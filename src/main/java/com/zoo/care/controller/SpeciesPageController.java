@@ -4,7 +4,9 @@ import com.zoo.care.dto.SpeciesRequest;
 import com.zoo.care.dto.SpeciesResponse;
 import com.zoo.care.entity.DietType;
 import com.zoo.care.entity.HabitatType;
-import com.zoo.care.exception.BusinessRuleException;
+import com.zoo.care.exception.SpeciesAlreadyExistsException;
+import com.zoo.care.exception.SpeciesHabitatLockedException;
+import com.zoo.care.exception.SpeciesInUseException;
 import com.zoo.care.service.SpeciesService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -60,7 +62,7 @@ public class SpeciesPageController {
         }
         try {
             speciesService.create(request);
-        } catch (BusinessRuleException ex) {
+        } catch (SpeciesAlreadyExistsException ex) {
             bindingResult.rejectValue("name", "duplicate", ex.getMessage());
             return FORM_VIEW;
         }
@@ -89,8 +91,12 @@ public class SpeciesPageController {
         }
         try {
             speciesService.update(id, request);
-        } catch (BusinessRuleException ex) {
+        } catch (SpeciesAlreadyExistsException ex) {
             bindingResult.rejectValue("name", "duplicate", ex.getMessage());
+            model.addAttribute("speciesId", id);
+            return FORM_VIEW;
+        } catch (SpeciesHabitatLockedException ex) {
+            bindingResult.rejectValue("habitatType", "locked", ex.getMessage());
             model.addAttribute("speciesId", id);
             return FORM_VIEW;
         }
@@ -103,7 +109,7 @@ public class SpeciesPageController {
         try {
             speciesService.delete(id);
             redirectAttributes.addFlashAttribute("successMessage", "Species deleted");
-        } catch (BusinessRuleException ex) {
+        } catch (SpeciesInUseException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
         }
         return REDIRECT_TO_LIST;

@@ -5,8 +5,10 @@ import com.zoo.care.dto.SpeciesRequest;
 import com.zoo.care.dto.SpeciesResponse;
 import com.zoo.care.entity.DietType;
 import com.zoo.care.entity.HabitatType;
-import com.zoo.care.exception.BusinessRuleException;
 import com.zoo.care.exception.ResourceNotFoundException;
+import com.zoo.care.exception.SpeciesAlreadyExistsException;
+import com.zoo.care.exception.SpeciesHabitatLockedException;
+import com.zoo.care.exception.SpeciesInUseException;
 import com.zoo.care.service.SpeciesService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -117,7 +119,7 @@ class SpeciesApiControllerTest {
     @Test
     void create_duplicateName_returnsConflict() throws Exception {
         when(speciesService.create(any(SpeciesRequest.class)))
-                .thenThrow(new BusinessRuleException("Species with name 'Lion' already exists"));
+                .thenThrow(new SpeciesAlreadyExistsException("Lion"));
 
         mockMvc.perform(post("/api/species")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -197,11 +199,22 @@ class SpeciesApiControllerTest {
 
     @Test
     void delete_speciesInUse_returnsConflict() throws Exception {
-        doThrow(new BusinessRuleException("Species is in use and cannot be deleted"))
+        doThrow(new SpeciesInUseException())
                 .when(speciesService).delete(1L);
 
         mockMvc.perform(delete("/api/species/1"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("Species is in use and cannot be deleted"));
+    }
+
+    @Test
+    void update_habitatLocked_returnsConflict() throws Exception {
+        when(speciesService.update(eq(1L), any(SpeciesRequest.class)))
+                .thenThrow(new SpeciesHabitatLockedException());
+
+        mockMvc.perform(put("/api/species/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(LION_JSON))
+                .andExpect(status().isConflict());
     }
 }

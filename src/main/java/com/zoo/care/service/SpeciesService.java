@@ -3,8 +3,7 @@ package com.zoo.care.service;
 import com.zoo.care.dto.SpeciesRequest;
 import com.zoo.care.dto.SpeciesResponse;
 import com.zoo.care.entity.Species;
-import com.zoo.care.exception.BusinessRuleException;
-import com.zoo.care.exception.ResourceNotFoundException;
+import com.zoo.care.exception.*;
 import com.zoo.care.repository.AnimalRepository;
 import com.zoo.care.repository.SpeciesRepository;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +38,7 @@ public class SpeciesService {
     public SpeciesResponse create(SpeciesRequest request) {
         String name = request.name().trim();
         if (speciesRepository.existsByNameIgnoreCase(name)) {
-            throw duplicateName(name);
+            throw new SpeciesAlreadyExistsException(name);
         }
         Species species = Species.builder()
                 .name(name)
@@ -56,11 +55,11 @@ public class SpeciesService {
         Species species = getSpecies(id);
         String name = request.name().trim();
         if (speciesRepository.existsByNameIgnoreCaseAndIdNot(name, id)) {
-            throw duplicateName(name);
+            throw new SpeciesAlreadyExistsException(name);
         }
         if (species.getHabitatType() != request.habitatType()
                 && animalRepository.existsBySpeciesId(id)) {
-            throw new BusinessRuleException("Habitat cannot be changed while the species has animals");
+            throw new SpeciesHabitatLockedException();
         }
         species.setName(name);
         species.setHabitatType(request.habitatType());
@@ -76,7 +75,7 @@ public class SpeciesService {
             speciesRepository.delete(species);
             speciesRepository.flush();
         } catch (DataIntegrityViolationException e) {
-            throw new BusinessRuleException("Species is in use and cannot be deleted");
+            throw new SpeciesInUseException();
         }
         log.info("Deleted species '{}' (id={})", species.getName(), id);
     }
@@ -86,7 +85,4 @@ public class SpeciesService {
                 .orElseThrow(() -> new ResourceNotFoundException("Species", id));
     }
 
-    private BusinessRuleException duplicateName(String name) {
-        return new BusinessRuleException("Species with name '" + name + "' already exists");
-    }
 }

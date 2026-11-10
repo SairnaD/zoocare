@@ -5,8 +5,10 @@ import com.zoo.care.dto.SpeciesResponse;
 import com.zoo.care.entity.DietType;
 import com.zoo.care.entity.HabitatType;
 import com.zoo.care.entity.Species;
-import com.zoo.care.exception.BusinessRuleException;
 import com.zoo.care.exception.ResourceNotFoundException;
+import com.zoo.care.exception.SpeciesAlreadyExistsException;
+import com.zoo.care.exception.SpeciesHabitatLockedException;
+import com.zoo.care.exception.SpeciesInUseException;
 import com.zoo.care.repository.AnimalRepository;
 import com.zoo.care.repository.SpeciesRepository;
 import org.junit.jupiter.api.Test;
@@ -57,7 +59,7 @@ class SpeciesServiceTest {
         when(speciesRepository.existsByNameIgnoreCase("Lion")).thenReturn(true);
 
         assertThatThrownBy(() -> speciesService.create(lionRequest("Lion")))
-                .isInstanceOf(BusinessRuleException.class);
+                .isInstanceOf(SpeciesAlreadyExistsException.class).hasMessage("Species with name 'Lion' already exists");
         verify(speciesRepository, never()).save(any());
     }
 
@@ -89,7 +91,7 @@ class SpeciesServiceTest {
         when(speciesRepository.existsByNameIgnoreCaseAndIdNot("Tiger", 1L)).thenReturn(true);
 
         assertThatThrownBy(() -> speciesService.update(1L, lionRequest("Tiger")))
-                .isInstanceOf(BusinessRuleException.class);
+                .isInstanceOf(SpeciesAlreadyExistsException.class);
     }
 
     @Test
@@ -119,7 +121,7 @@ class SpeciesServiceTest {
                 .when(speciesRepository).flush();
 
         assertThatThrownBy(() -> speciesService.delete(1L))
-                .isInstanceOf(BusinessRuleException.class)
+                .isInstanceOf(SpeciesInUseException.class)
                 .hasMessage("Species is in use and cannot be deleted");
     }
 
@@ -131,7 +133,7 @@ class SpeciesServiceTest {
 
         assertThatThrownBy(() -> speciesService.update(1L,
                 new SpeciesRequest("Lion", HabitatType.JUNGLE, DietType.CARNIVORE)))
-                .isInstanceOf(BusinessRuleException.class);
+                .isInstanceOf(SpeciesHabitatLockedException.class);
     }
 
     private SpeciesRequest lionRequest(String name) {

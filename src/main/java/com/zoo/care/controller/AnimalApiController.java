@@ -1,11 +1,8 @@
 package com.zoo.care.controller;
 
 import com.zoo.care.dto.AnimalResponse;
-import com.zoo.care.exception.ErrorResponse;
 import com.zoo.care.service.AnimalService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -33,8 +30,7 @@ public class AnimalApiController {
     }
 
     @Operation(summary = "Get an animal by id")
-    @ApiResponse(responseCode = "404", description = "Animal not found",
-            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Animal not found")
     @GetMapping("/{id}")
     public AnimalResponse findById(@PathVariable Long id) {
         return animalService.findById(id);

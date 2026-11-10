@@ -1,7 +1,7 @@
 package com.zoo.care.exception;
 
-public class BusinessRuleException extends RuntimeException{
-    public  BusinessRuleException(String message) {
+public abstract class BusinessRuleException extends RuntimeException {
+    protected BusinessRuleException(String message) {
         super(message);
     }
 }

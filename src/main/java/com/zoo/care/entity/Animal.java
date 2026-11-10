@@ -36,21 +36,11 @@ public class Animal {
     @Column(nullable = false)
     private float weight; // kg
 
-    @Column(nullable = false)
-    private int size; // cm
-
     @Column(name = "feeding_interval_hours", nullable = false)
     private int feedingIntervalHours;
 
     @Column(length = 500)
     private String description;
-
-    @Column
-    private String photo; // stored file name, served from /photos/{name}
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "health_status", nullable = false, length = 30)
-    private HealthStatus healthStatus;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "deleted_status", nullable = false, length = 30)

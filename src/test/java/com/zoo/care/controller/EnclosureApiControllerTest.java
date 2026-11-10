@@ -5,8 +5,7 @@ import com.zoo.care.dto.EnclosureRequest;
 import com.zoo.care.dto.EnclosureResponse;
 import com.zoo.care.dto.KeeperAssignmentResponse;
 import com.zoo.care.entity.HabitatType;
-import com.zoo.care.exception.BusinessRuleException;
-import com.zoo.care.exception.ResourceNotFoundException;
+import com.zoo.care.exception.*;
 import com.zoo.care.service.EnclosureService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -123,7 +122,7 @@ class EnclosureApiControllerTest {
     @Test
     void create_duplicateName_returnsConflict() throws Exception {
         when(enclosureService.create(any(EnclosureRequest.class)))
-                .thenThrow(new BusinessRuleException("Enclosure with name 'Savanna 1' already exists"));
+                .thenThrow(new EnclosureAlreadyExistsException("Savanna 1"));
 
         mockMvc.perform(post("/api/enclosures")
                         .with(csrf())
@@ -216,7 +215,7 @@ class EnclosureApiControllerTest {
 
     @Test
     void delete_enclosureWithAnimals_returnsConflict() throws Exception {
-        doThrow(new BusinessRuleException("Enclosure still has animals and cannot be deleted"))
+        doThrow(new EnclosureNotEmptyException())
                 .when(enclosureService).delete(1L);
 
         mockMvc.perform(delete("/api/enclosures/1"))
@@ -266,7 +265,7 @@ class EnclosureApiControllerTest {
     @Test
     void assignKeeper_alreadyAssigned_returnsConflict() throws Exception {
         when(enclosureService.assignKeeper(1L, 7L))
-                .thenThrow(new BusinessRuleException("Keeper is already assigned to this enclosure"));
+                .thenThrow(new KeeperAlreadyAssignedException());
 
         mockMvc.perform(post("/api/enclosures/1/keepers")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -309,10 +308,22 @@ class EnclosureApiControllerTest {
 
     @Test
     void removeKeeper_notAssigned_returnsNotFound() throws Exception {
-        doThrow(new ResourceNotFoundException("Keeper 7 is not assigned to enclosure 1"))
+        doThrow(new KeeperAssignmentNotFoundException(1L, 7L))
                 .when(enclosureService).unassignKeeper(1L, 7L);
 
         mockMvc.perform(delete("/api/enclosures/1/keepers/7"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void assignKeeper_userIsNotKeeper_returnsConflict() throws Exception {
+        when(enclosureService.assignKeeper(1L, 7L)).thenThrow(new UserIsNotKeeperException());
+
+        mockMvc.perform(post("/api/enclosures/1/keepers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"keeperId": 7}
+                                """))
+                .andExpect(status().isConflict());
     }
 }
