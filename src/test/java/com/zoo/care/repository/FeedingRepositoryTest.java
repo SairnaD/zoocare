@@ -9,6 +9,7 @@ import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -96,6 +97,44 @@ class FeedingRepositoryTest {
         em.flush();
         em.clear();
         assertThat(repository.findLastFeedingTimes(List.of(neverFed.animal().getId()))).isEmpty();
+    }
+
+    @Test
+    void historySince_returnsAllAnimalsNewestFirstIncludingBorder() {
+        var first = FeedingTestData.persist(em.getEntityManager(), NOW);
+        var second = FeedingTestData.persist(em.getEntityManager(), NOW);
+        Instant from = NOW.minus(7, ChronoUnit.DAYS);
+        persistFeeding(first, NOW.minus(2, ChronoUnit.DAYS), "Two days ago");
+        persistFeeding(second, NOW.minusSeconds(3600), "One hour ago");
+        persistFeeding(first, from, "At border");
+        persistFeeding(second, from.minusSeconds(1), "Too old");
+        em.flush();
+        em.clear();
+
+        assertThat(repository.findByFedAtGreaterThanEqualOrderByFedAtDescIdDesc(from))
+                .extracting(Feedings::getNote)
+                .containsExactly("One hour ago", "Two days ago", "At border");
+    }
+
+    @Test
+    void historyOfEnclosures_returnsOnlyAnimalsOfRequestedEnclosures() {
+        var first = FeedingTestData.persist(em.getEntityManager(), NOW);
+        var second = FeedingTestData.persist(em.getEntityManager(), NOW);
+        var unrelated = FeedingTestData.persist(em.getEntityManager(), NOW);
+        Instant from = NOW.minus(7, ChronoUnit.DAYS);
+        persistFeeding(first, NOW.minus(1, ChronoUnit.DAYS), "First");
+        persistFeeding(second, NOW.minusSeconds(3600), "Second");
+        persistFeeding(unrelated, NOW.minusSeconds(60), "Other enclosure");
+        persistFeeding(first, from.minusSeconds(1), "Too old");
+        em.flush();
+        List<Long> enclosureIds = List.of(
+                first.animal().getEnclosure().getId(), second.animal().getEnclosure().getId());
+        em.clear();
+
+        assertThat(repository.findByAnimalEnclosureIdInAndFedAtGreaterThanEqualOrderByFedAtDescIdDesc(
+                enclosureIds, from))
+                .extracting(Feedings::getNote)
+                .containsExactly("Second", "First");
     }
 
     private Feedings persistFeeding(FeedingTestData.Fixture fixture, Instant time, String note) {

@@ -3,7 +3,13 @@ package com.zoo.care.controller;
 
 import com.zoo.care.dto.FeedingRequest;
 import com.zoo.care.dto.FeedingResponse;
+import com.zoo.care.exception.ErrorResponse;
 import com.zoo.care.service.FeedingService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -11,19 +17,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import com.zoo.care.exception.ErrorResponse;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
 
-@Tag(name = "Feedings", description = "Record animal feedings (assigned KEEPER only)")
+@Tag(name = "Feedings", description = "Record animal feedings")
 @RestController
 @RequestMapping("/api/animals/{animalId}/feedings")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('KEEPER')")
 public class FeedingApiController {
 
     private final FeedingService feedingService;
@@ -61,9 +60,8 @@ public class FeedingApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class)))
     })
-
-
     @PostMapping
+    @PreAuthorize("hasRole('KEEPER')")
     @ResponseStatus(HttpStatus.CREATED)
     public FeedingResponse recordFeeding(
             @PathVariable Long animalId,
@@ -75,7 +73,4 @@ public class FeedingApiController {
                 request,
                 authentication.getName());
     }
-
-
-
 }

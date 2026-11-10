@@ -1,31 +1,33 @@
 package com.zoo.care.service;
 
 
+import com.zoo.care.dto.AnimalFeedingGroup;
+import com.zoo.care.dto.FeedingHistoryResponse;
 import com.zoo.care.dto.FeedingRequest;
 import com.zoo.care.dto.FeedingResponse;
+import com.zoo.care.entity.*;
 import com.zoo.care.exception.AnimalDeletedException;
 import com.zoo.care.exception.FeedingTooEarlyException;
+import com.zoo.care.exception.ResourceNotFoundException;
 import com.zoo.care.repository.AnimalRepository;
 import com.zoo.care.repository.FeedingRepository;
 import com.zoo.care.repository.KeeperAssignmentRepository;
 import com.zoo.care.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import java.time.Clock;
-import com.zoo.care.entity.Animal;
-import com.zoo.care.entity.User;
-import com.zoo.care.exception.ResourceNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
-import com.zoo.care.entity.Role;
-import java.time.Instant;
-import com.zoo.care.exception.BusinessRuleException;
-import java.time.temporal.ChronoUnit;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
-import com.zoo.care.entity.DeletedStatus;
-import com.zoo.care.entity.Feedings;
+
+import java.time.Clock;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -38,6 +40,7 @@ public class FeedingService {
     private final UserRepository userRepository;
     private final KeeperAssignmentRepository keeperAssignmentRepository;
     private final Clock clock;
+    private static final int HISTORY_DAYS = 7;
 
     private User getUser(String username) {
         return userRepository.findByUsername(username)
@@ -71,6 +74,37 @@ public class FeedingService {
                 });
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'KEEPER')")
+    @Transactional(readOnly = true)
+    public List<AnimalFeedingGroup> getFeedingOverview(String username) {
+        User user = getUser(username);
+        Instant now = Instant.now(clock);
+        Instant from = now.minus(HISTORY_DAYS, ChronoUnit.DAYS);
+
+        List<Feedings> feedings;
+        if (user.getRole() == Role.ADMIN) {
+            feedings = feedingRepository.findByFedAtGreaterThanEqualOrderByFedAtDescIdDesc(from);
+        } else {
+            List<Long> enclosureIds = keeperAssignmentRepository.findActiveByKeeper(user.getId(), now).stream()
+                    .map(assignment -> assignment.getEnclosure().getId())
+                    .toList();
+            if (enclosureIds.isEmpty()) {
+                return List.of();
+            }
+            feedings = feedingRepository.findByAnimalEnclosureIdInAndFedAtGreaterThanEqualOrderByFedAtDescIdDesc(
+                    enclosureIds, from);
+        }
+
+        Map<Long, List<FeedingHistoryResponse>> byAnimal = feedings.stream()
+                .collect(Collectors.groupingBy(
+                        feeding -> feeding.getAnimal().getId(),
+                        LinkedHashMap::new,
+                        Collectors.mapping(FeedingHistoryResponse::from, Collectors.toList())));
+
+        return byAnimal.values().stream()
+                .map(list -> new AnimalFeedingGroup(list.get(0), list.subList(1, list.size())))
+                .toList();
+    }
 
     @PreAuthorize("hasRole('KEEPER')")
     @Transactional(isolation = Isolation.READ_COMMITTED)
