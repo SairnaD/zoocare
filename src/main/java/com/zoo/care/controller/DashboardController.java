@@ -6,6 +6,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import java.time.ZoneId;
 
 @Controller
 @RequiredArgsConstructor
@@ -22,7 +23,8 @@ public class DashboardController {
 
     @GetMapping("/keeper")
     public String keeperDashboardPage(Authentication authentication, Model model) {
-        model.addAttribute("enclosures", keeperDashboardService.findForKeeper(authentication.getName()));
+        model.addAttribute("dueAnimals", keeperDashboardService.findDueForKeeper(authentication.getName()));
+        model.addAttribute("displayZone", ZoneId.of("Europe/Riga"));
         return "keeper/dashboard";
     }
 

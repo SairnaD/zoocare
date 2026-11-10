@@ -1,12 +1,51 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head('Keeper dashboard')}"></head>
+<head th:replace="~{fragments/layout :: head('Due for feeding')}"></head>
 <body>
 <nav th:replace="~{fragments/layout :: navbar}"></nav>
 
 <main class="container py-4">
-    <h1 class="h3 mb-3">Keeper dashboard</h1>
-    <p class="text-muted">Your enclosures and animals due for feeding will appear here.</p>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <h1 class="h3 mb-0">Due for feeding
+            <span class="text-secondary fw-medium" th:text="|(${#lists.size(dueAnimals)})|">(0)</span>
+        </h1>
+        <span class="text-secondary small">All times: Europe/Riga</span>
+    </div>
+
+    <div th:if="${#lists.isEmpty(dueAnimals)}" class="card zc-empty">
+        <span class="zc-empty-icon" aria-hidden="true"><i class="bi bi-check-circle"></i></span>
+        <h2 class="h5 mb-0">No animals are due for feeding right now.</h2>
+    </div>
+
+    <div th:unless="${#lists.isEmpty(dueAnimals)}" class="card overflow-hidden">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                <tr>
+                    <th scope="col">Animal</th>
+                    <th scope="col">Species</th>
+                    <th scope="col">Enclosure</th>
+                    <th scope="col">Feeding every</th>
+                    <th scope="col">Last fed</th>
+                    <th scope="col">Next feeding from</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="animal : ${dueAnimals}">
+                    <td class="fw-semibold" th:text="${animal.animalName()}">Leo</td>
+                    <td th:text="${animal.speciesName()}">Lion</td>
+                    <td th:text="${animal.enclosureName()}">Savanna 1</td>
+                    <td th:text="|${animal.feedingIntervalHours()} h|">6 h</td>
+                    <td th:text="${animal.lastFedAt() == null ? 'Never fed' : #temporals.format(animal.lastFedAt().atZone(displayZone), 'dd.MM.yyyy HH:mm')}">Never fed</td>
+                    <td>
+                        <span class="badge rounded-pill text-bg-danger"
+                              th:text="${animal.nextAllowedAt() == null ? 'Ready now' : #temporals.format(animal.nextAllowedAt().atZone(displayZone), 'dd.MM.yyyy HH:mm')}">Ready now</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </main>
 
 <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
