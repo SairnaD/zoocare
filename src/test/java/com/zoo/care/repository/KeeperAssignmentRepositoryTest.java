@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import java.time.Instant;
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 
@@ -206,6 +208,30 @@ public class KeeperAssignmentRepositoryTest {
         assertThat(repository.count()).isZero();
     }
 
+    @Test
+    @DisplayName("findActiveByKeeper returns the assignment only while it is active")
+    void findActiveByKeeper_onlyWhileActive() {
+        AssignmentIds ids = persistAssignment(
+                Instant.parse("2026-11-04T08:00:00Z"), Instant.parse("2026-11-04T10:00:00Z"));
+
+        assertThat(repository.findActiveByKeeper(ids.keeperId(),
+                Instant.parse("2026-11-04T09:00:00Z"))).hasSize(1);
+        assertThat(repository.findActiveByKeeper(ids.keeperId(),
+                Instant.parse("2026-11-04T12:00:00Z"))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("findActiveByKeeper loads the enclosure of the assignment")
+    void findActiveByKeeper_loadsEnclosure() {
+        AssignmentIds ids = persistAssignment(Instant.parse("2026-11-04T08:00:00Z"), null);
+
+        List<KeeperAssignment> result = repository.findActiveByKeeper(
+                ids.keeperId(), Instant.parse("2026-11-04T12:00:00Z"));
+
+        assertThat(result).singleElement()
+                .satisfies(assignment -> assertThat(assignment.getEnclosure().getName()).isEqualTo("Savanna Test"));
+    }
+
     private AssignmentIds persistAssignment(Instant startsAt, Instant endsAt) {
         User keeper = User.builder()
                 .username("keeper-test")
@@ -242,5 +268,6 @@ public class KeeperAssignmentRepositoryTest {
 
     private record AssignmentIds(Long enclosureId, Long keeperId) {
     }
+
 }
 
