@@ -9,7 +9,7 @@
         <h1 class="h3 mb-0">Due for feeding
             <span class="text-secondary fw-medium" th:text="|(${#lists.size(dueAnimals)})|">(0)</span>
         </h1>
-        <span class="text-secondary small">All times: Europe/Riga</span>
+        <span class="text-secondary small" th:text="|All times: ${displayZone}|">All times: Europe/Riga</span>
     </div>
 
     <div th:if="${#lists.isEmpty(dueAnimals)}" class="card zc-empty">
@@ -31,15 +31,15 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr th:each="animal : ${dueAnimals}">
-                    <td class="fw-semibold" th:text="${animal.animalName()}">Leo</td>
-                    <td th:text="${animal.speciesName()}">Lion</td>
-                    <td th:text="${animal.enclosureName()}">Savanna 1</td>
-                    <td th:text="|${animal.feedingIntervalHours()} h|">6 h</td>
-                    <td th:text="${animal.lastFedAt() == null ? 'Never fed' : #temporals.format(animal.lastFedAt().atZone(displayZone), 'dd.MM.yyyy HH:mm')}">Never fed</td>
+                <tr th:each="item : ${dueAnimals}">
+                    <td class="fw-semibold" th:text="${item.animalName()}">Leo</td>
+                    <td th:text="${item.speciesName()}">Lion</td>
+                    <td th:text="${item.enclosureName()}">Savanna 1</td>
+                    <td th:text="|${item.feedingIntervalHours()} h|">6 h</td>
+                    <td th:text="${item.lastFedAt() == null ? 'Never fed' : #temporals.format(item.lastFedAt().atZone(displayZone), 'dd.MM.yyyy HH:mm')}">Never fed</td>
                     <td>
-                        <span class="badge rounded-pill text-bg-danger"
-                              th:text="${animal.nextAllowedAt() == null ? 'Ready now' : #temporals.format(animal.nextAllowedAt().atZone(displayZone), 'dd.MM.yyyy HH:mm')}">Ready now</span>
+                        <span class="badge-status badge-need"
+                              th:text="${item.nextAllowedAt() == null ? 'Ready now' : #temporals.format(item.nextAllowedAt().atZone(displayZone), 'dd.MM.yyyy HH:mm')}">Ready now</span>
                     </td>
                 </tr>
                 </tbody>

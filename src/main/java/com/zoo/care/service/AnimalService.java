@@ -3,16 +3,15 @@ package com.zoo.care.service;
 import com.zoo.care.dto.AnimalRequest;
 import com.zoo.care.dto.AnimalResponse;
 import com.zoo.care.entity.Animal;
+import com.zoo.care.entity.DeletedStatus;
 import com.zoo.care.entity.Enclosure;
 import com.zoo.care.entity.Species;
 import com.zoo.care.exception.*;
-import com.zoo.care.entity.*;
 import com.zoo.care.repository.AnimalRepository;
 import com.zoo.care.repository.EnclosureRepository;
 import com.zoo.care.repository.SpeciesRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -37,8 +36,7 @@ public class AnimalService {
     }
 
     public AnimalResponse findById(Long id) {
-        return AnimalResponse.from(animalRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Animal", id)));
+        return AnimalResponse.from(getAnimal(id));
     }
 
     @Transactional
@@ -47,14 +45,9 @@ public class AnimalService {
         if (animalRepository.existsByNameIgnoreCase(name)) {
             throw new AnimalAlreadyExistsException(name);
         }
-        Species species = speciesRepository.findById(request.speciesId())
-                .orElseThrow(() -> new ResourceNotFoundException("Species", request.speciesId()));
-
-        // Lock the enclosure first so two concurrent creations can't both pass the capacity check
-        Enclosure enclosure = enclosureRepository.findByIdForUpdate(request.enclosureId())
-                .orElseThrow(() -> new ResourceNotFoundException("Enclosure", request.enclosureId()));
-        checkCapacity(enclosure);
-        checkHabitat(species, enclosure);
+        Species species = getSpecies(request.speciesId());
+        Enclosure enclosure = lockEnclosure(request.enclosureId());
+        checkPlacement(species, enclosure);
 
         Animal saved = animalRepository.save(Animal.builder()
                 .name(name)
@@ -75,15 +68,12 @@ public class AnimalService {
 
     @Transactional
     public AnimalResponse update(Long id, AnimalRequest request) {
-        Animal animal = findPresentAnimal(id);
-
+        Animal animal = getPresentAnimal(id);
         String name = request.name().trim();
         if (animalRepository.existsByNameIgnoreCaseAndIdNot(name, id)) {
             throw new AnimalAlreadyExistsException(name);
         }
-
-        Species species = speciesRepository.findById(request.speciesId())
-                .orElseThrow(() -> new ResourceNotFoundException("Species", request.speciesId()));
+        Species species = getSpecies(request.speciesId());
 
         if (!animal.getEnclosure().getId().equals(request.enclosureId())) {
             moveToEnclosure(animal, species, request.enclosureId());
@@ -105,7 +95,7 @@ public class AnimalService {
 
     @Transactional
     public AnimalResponse transferAnimal(Long animalId, Long targetEnclosureId) {
-        Animal animal = findPresentAnimal(animalId);
+        Animal animal = getPresentAnimal(animalId);
         if (animal.getEnclosure().getId().equals(targetEnclosureId)) {
             throw new SameEnclosureException();
         }
@@ -115,29 +105,29 @@ public class AnimalService {
 
     @Transactional
     public void delete(Long id) {
-        Animal animal = animalRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Animal", id));
-        animalRepository.delete(animal);
-        animalRepository.flush();
+        Animal animal = getAnimal(id);
+        try {
+            animalRepository.delete(animal);
+            animalRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            log.info("Animal id={} cannot be deleted: other records refer to it", id);
+            throw new AnimalInUseException();
+        }
         log.info("Deleted animal '{}' (id={})", animal.getName(), id);
     }
 
     private void moveToEnclosure(Animal animal, Species species, Long targetId) {
-        Enclosure target = enclosureRepository.findByIdForUpdate(targetId)
-                .orElseThrow(() -> new ResourceNotFoundException("Enclosure", targetId));
-        checkHabitat(species, target);
-        checkCapacity(target);
+        Enclosure target = lockEnclosure(targetId);
+        checkPlacement(species, target);
 
-        Enclosure source = animal.getEnclosure();
+        String sourceName = animal.getEnclosure().getName();
         animal.setEnclosure(target);
-        log.info("Transferred animal '{}' from '{}' to '{}'",
-                animal.getName(), source.getName(), target.getName());
+        log.info("Transferred animal '{}' from '{}' to '{}'", animal.getName(), sourceName, target.getName());
     }
 
-    private void checkCapacity(Enclosure target) {
-        if (animalRepository.countByEnclosureId(target.getId()) >= target.getCapacity()) {
-            throw new EnclosureFullException(target.getName());
-        }
+    private void checkPlacement(Species species, Enclosure enclosure) {
+        checkHabitat(species, enclosure);
+        checkCapacity(enclosure);
     }
 
     private void checkHabitat(Species species, Enclosure enclosure) {
@@ -146,19 +136,40 @@ public class AnimalService {
         }
     }
 
-    private Animal findPresentAnimal(Long id) {
-        Animal animal = animalRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Animal", id));
-        if (animal.getDeletedStatus() != DeletedStatus.PRESENT) {
-            throw new AnimalDeletedException();
+    private void checkCapacity(Enclosure enclosure) {
+        if (animalRepository.countByEnclosureId(enclosure.getId()) >= enclosure.getCapacity()) {
+            throw new EnclosureFullException(enclosure.getName());
         }
-        return animal;
     }
+
     private void flushOrReportDuplicate(String name) {
         try {
             animalRepository.flush();
         } catch (DataIntegrityViolationException e) {
             throw new AnimalAlreadyExistsException(name);
         }
+    }
+
+    private Animal getAnimal(Long id) {
+        return animalRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Animal", id));
+    }
+
+    private Animal getPresentAnimal(Long id) {
+        Animal animal = getAnimal(id);
+        if (animal.getDeletedStatus() != DeletedStatus.PRESENT) {
+            throw new AnimalDeletedException();
+        }
+        return animal;
+    }
+
+    private Species getSpecies(Long id) {
+        return speciesRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Species", id));
+    }
+
+    private Enclosure lockEnclosure(Long id) {
+        return enclosureRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Enclosure", id));
     }
 }
