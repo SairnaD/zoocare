@@ -4,18 +4,28 @@
 <body>
 <nav th:replace="~{fragments/layout :: navbar}"></nav>
 
-<main class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-12 col-md-8 col-lg-6">
-            <h1 class="h3 mb-4">Keepers of <span th:text="${enclosure.name()}">Savanna 1</span></h1>
+<main class="container py-4">
+    <div class="zc-form-card">
+        <th:block th:replace="~{fragments/layout :: alerts}"></th:block>
 
-            <div th:if="${successMessage}" th:text="${successMessage}" class="alert alert-success">Saved</div>
+        <div class="card">
+            <div class="card-header bg-transparent py-3 d-flex flex-wrap align-items-center gap-2">
+                <h1 class="h5 mb-0">Keepers of <span th:text="${enclosure.name()}">Savanna 1</span></h1>
+                <span class="chip"
+                      th:classappend="|chip-${#strings.toLowerCase(enclosure.habitatType())}|"
+                      th:text="${#strings.capitalize(#strings.toLowerCase(enclosure.habitatType()))}">Savanna</span>
+            </div>
 
-            <p th:if="${#lists.isEmpty(assignments)}" class="text-muted">No keepers assigned yet.</p>
-            <ul th:unless="${#lists.isEmpty(assignments)}" class="list-group mb-4">
+            <p th:if="${#lists.isEmpty(assignments)}" class="text-secondary p-3 mb-0">
+                No keepers assigned yet.
+            </p>
+            <ul th:unless="${#lists.isEmpty(assignments)}" class="list-group list-group-flush">
                 <li th:each="assignment : ${assignments}"
-                    class="list-group-item d-flex justify-content-between align-items-center">
-                    <span th:text="${assignment.keeperName()}">Ben Ten</span>
+                    class="list-group-item d-flex justify-content-between align-items-center py-3">
+                    <span class="d-flex align-items-center gap-2 fw-semibold">
+                        <span class="zc-user-icon" aria-hidden="true"><i class="bi bi-person-fill"></i></span>
+                        <span th:text="${assignment.keeperName()}">Anna Berzina</span>
+                    </span>
                     <form th:action="@{/admin/enclosures/{id}/keepers/{keeperId}/remove(id=${enclosure.id()}, keeperId=${assignment.keeperId()})}"
                           method="post">
                         <button type="submit" class="btn btn-outline-danger btn-sm">Remove</button>
@@ -23,32 +33,41 @@
                 </li>
             </ul>
 
-            <p th:if="${#lists.isEmpty(allKeepers)}" class="text-muted">No keepers are registered yet.</p>
+            <div class="card-body border-top">
+                <p th:if="${#lists.isEmpty(allKeepers)}" class="text-secondary mb-0">
+                    No keepers are registered yet.
+                </p>
 
-            <form th:unless="${#lists.isEmpty(allKeepers)}"
-                  th:action="@{/admin/enclosures/{id}/keepers(id=${enclosure.id()})}"
-                  th:object="${keeperAssignmentRequest}" method="post" novalidate>
+                <form th:unless="${#lists.isEmpty(allKeepers)}"
+                      th:action="@{/admin/enclosures/{id}/keepers(id=${enclosure.id()})}"
+                      th:object="${keeperAssignmentRequest}" method="post" novalidate>
 
-                <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger">
-                    <p th:each="error : ${#fields.globalErrors()}" th:text="${error}" class="mb-0">Error</p>
-                </div>
+                    <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger d-flex align-items-start gap-2" role="alert">
+                        <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+                        <div>
+                            <p th:each="error : ${#fields.globalErrors()}" th:text="${error}" class="mb-0">Error</p>
+                        </div>
+                    </div>
 
-                <div class="mb-3">
-                    <label for="keeperId" class="form-label">Assign keeper</label>
-                    <select th:field="*{keeperId}" th:errorclass="is-invalid" class="form-select">
-                        <option value="">Choose keeper...</option>
-                        <option th:each="keeper : ${allKeepers}" th:value="${keeper.id()}"
-                                th:text="|${keeper.fullName()} (${keeper.username()})|">Ben Ten (ben)</option>
-                    </select>
-                    <div th:if="${#fields.hasErrors('keeperId')}" th:errors="*{keeperId}"
-                         class="invalid-feedback">Keeper error</div>
-                </div>
+                    <label for="keeperId" class="form-label fw-semibold">Assign keeper</label>
+                    <div class="d-flex gap-2">
+                        <select th:field="*{keeperId}" th:errorclass="is-invalid" class="form-select">
+                            <option value="">Choose keeper...</option>
+                            <option th:each="keeper : ${allKeepers}" th:value="${keeper.id()}"
+                                    th:text="|${keeper.fullName()} (${keeper.username()})|">Ben Ozols (ben)</option>
+                        </select>
+                        <button type="submit" class="btn btn-primary">Assign</button>
+                    </div>
+                    <div th:if="${#fields.hasErrors('keeperId')}" class="invalid-feedback d-flex gap-1">
+                        <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+                        <span th:errors="*{keeperId}">Keeper error</span>
+                    </div>
+                </form>
+            </div>
 
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-success">Assign</button>
-                    <a th:href="@{/admin/enclosures}" class="btn btn-outline-secondary">Back</a>
-                </div>
-            </form>
+            <div class="card-footer bg-transparent d-flex justify-content-end py-3">
+                <a th:href="@{/admin/enclosures}" class="btn btn-outline-secondary">Back to enclosures</a>
+            </div>
         </div>
     </div>
 </main>

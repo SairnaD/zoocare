@@ -33,6 +33,7 @@
                     <th scope="col">Name</th>
                     <th scope="col">Habitat</th>
                     <th scope="col">Capacity</th>
+                    <th scope="col">Keepers</th>
                     <th scope="col" class="text-end">Actions</th>
                 </tr>
                 </thead>
@@ -45,6 +46,11 @@
                               th:text="${#strings.capitalize(#strings.toLowerCase(enclosure.habitatType))}">Savanna</span>
                     </td>
                     <td th:text="|${enclosure.capacity} animals|">3 animals</td>
+                    <td>
+                        <span th:if="${#lists.isEmpty(enclosure.keeperNames)}" class="text-secondary">No keeper</span>
+                        <span th:unless="${#lists.isEmpty(enclosure.keeperNames)}"
+                              th:text="${#strings.listJoin(enclosure.keeperNames, ', ')}">Anna Berzina, Janis Kalnins</span>
+                    </td>
                     <td class="text-end">
                         <div class="d-inline-flex gap-2">
                             <a th:href="@{/admin/enclosures/{id}/keepers(id=${enclosure.id})}"

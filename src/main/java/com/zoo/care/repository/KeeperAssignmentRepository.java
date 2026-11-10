@@ -59,5 +59,14 @@ public interface KeeperAssignmentRepository extends JpaRepository<KeeperAssignme
     List<KeeperAssignment> findActiveByKeeper(@Param("keeperId") Long keeperId,
                                               @Param("moment") Instant moment);
 
+    @Query("""
+        select a from KeeperAssignment a
+        join fetch a.keeper
+        where a.startsAt <= :moment
+          and (a.endsAt is null or a.endsAt > :moment)
+        order by a.keeper.fullName
+        """)
+    List<KeeperAssignment> findAllActive(@Param("moment") Instant moment);
+
     void deleteByEnclosureId(Long enclosureId);
 }

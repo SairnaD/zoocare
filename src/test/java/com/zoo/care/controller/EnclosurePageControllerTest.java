@@ -34,7 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class EnclosurePageControllerTest {
 
     private static final EnclosureResponse SAVANNA =
-            new EnclosureResponse(1L, "Savanna 1", HabitatType.SAVANNA, 3);
+            new EnclosureResponse(1L, "Savanna 1", HabitatType.SAVANNA, 3, List.of());
 
     @Autowired
     private MockMvc mockMvc;
