@@ -3,6 +3,8 @@ package com.zoo.care.service;
 
 import com.zoo.care.dto.FeedingRequest;
 import com.zoo.care.dto.FeedingResponse;
+import com.zoo.care.exception.AnimalDeletedException;
+import com.zoo.care.exception.FeedingTooEarlyException;
 import com.zoo.care.repository.AnimalRepository;
 import com.zoo.care.repository.FeedingRepository;
 import com.zoo.care.repository.KeeperAssignmentRepository;
@@ -64,8 +66,7 @@ public class FeedingService {
                             .plus(animal.getFeedingIntervalHours(), ChronoUnit.HOURS);
 
                     if (now.isBefore(nextAllowedAt)) {
-                        throw new BusinessRuleException(
-                                "Animal can be fed again at " + nextAllowedAt);
+                        throw new FeedingTooEarlyException(nextAllowedAt);
                     }
                 });
     }
@@ -86,8 +87,7 @@ public class FeedingService {
         checkFeedingAccess(user, animal, now);
 
         if (animal.getDeletedStatus() == DeletedStatus.DELETED) {
-            throw new BusinessRuleException(
-                    "Cannot record a feeding for a deleted animal");
+            throw new AnimalDeletedException();
         }
 
         checkFeedingInterval(animal, now);

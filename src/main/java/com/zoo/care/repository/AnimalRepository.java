@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,6 +23,9 @@ public interface AnimalRepository extends JpaRepository<Animal, Long> {
     @Override
     @EntityGraph(attributePaths = {"species", "enclosure"})
     Optional<Animal> findById(Long id);
+
+    @EntityGraph(attributePaths = {"species", "enclosure"})
+    List<Animal> findByEnclosureIdInOrderByNameAsc(Collection<Long> enclosureIds);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from Animal a where a.id = :id")
