@@ -4,27 +4,62 @@
 <body>
 <nav th:replace="~{fragments/layout :: navbar}"></nav>
 
-<main class="container py-4">
-    <div class="zc-form-card">
-        <a th:href="@{/admin/animals}" class="btn btn-outline-secondary btn-sm mb-3">&larr; All animals</a>
-        <div class="card">
-            <div class="card-body">
-                <h1 class="h4" th:text="${animal.name()}">Leo</h1>
-                <p class="text-secondary" th:if="${animal.description() != null}"
-                   th:text="${animal.description()}">Description</p>
-                <dl class="row mb-0">
-                    <dt class="col-5">Species</dt>
-                    <dd class="col-7" th:text="${animal.speciesName()}">Lion</dd>
-                    <dt class="col-5">Enclosure</dt>
-                    <dd class="col-7" th:text="${animal.enclosureName()}">Savanna 1</dd>
-                    <dt class="col-5">Birth date</dt>
-                    <dd class="col-7" th:text="${animal.birthDate()}">2020-05-01</dd>
-                    <dt class="col-5">Weight</dt>
-                    <dd class="col-7" th:text="|${animal.weight()} kg|">180.5 kg</dd>
-                    <dt class="col-5">Feeding every</dt>
-                    <dd class="col-7" th:text="|${animal.feedingIntervalHours()} h|">6 h</dd>
-                </dl>
+<main class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-10 col-lg-6">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <a th:href="@{/admin/animals}" class="btn btn-outline-secondary btn-sm">&larr; All animals</a>
+                <a th:href="@{/admin/animals/{id}/edit(id=${animal.id()})}" class="btn btn-primary btn-sm">Edit</a>
             </div>
+
+            <div th:if="${successMessage}" th:text="${successMessage}" class="alert alert-success">Saved</div>
+            <div th:if="${errorMessage}" th:text="${errorMessage}" class="alert alert-danger">Error</div>
+
+            <div class="card">
+                <div class="card-body">
+                    <h1 class="h3" th:text="${animal.name()}">Leo</h1>
+                    <p class="text-muted" th:if="${animal.description() != null}"
+                       th:text="${animal.description()}">Description</p>
+                    <dl class="row mb-0">
+                        <dt class="col-5">Species</dt>
+                        <dd class="col-7" th:text="${animal.speciesName()}">Lion</dd>
+                        <dt class="col-5">Enclosure</dt>
+                        <dd class="col-7" th:text="${animal.enclosureName()}">Savanna 1</dd>
+                        <dt class="col-5">Birth date</dt>
+                        <dd class="col-7" th:text="${animal.birthDate()}">2020-05-01</dd>
+                        <dt class="col-5">Weight</dt>
+                        <dd class="col-7" th:text="|${animal.weight()} kg|">180.5 kg</dd>
+                        <dt class="col-5">Feeding every</dt>
+                        <dd class="col-7" th:text="|${animal.feedingIntervalHours()} h|">6 h</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h2 class="h5">Move to another enclosure</h2>
+                    <form th:action="@{/admin/animals/{id}/transfer(id=${animal.id()})}" method="post" class="row g-2">
+                        <div class="col-12 col-sm-8">
+                            <select name="enclosureId" class="form-select" aria-label="Target enclosure" required>
+                                <option value="">Choose enclosure...</option>
+                                <option th:each="enclosure : ${enclosures}"
+                                        th:if="${enclosure.id() != animal.enclosureId()}"
+                                        th:value="${enclosure.id()}"
+                                        th:text="|${enclosure.name()} (${enclosure.habitatType()}, capacity ${enclosure.capacity()})|">Savannah 2</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-sm-4 d-grid">
+                            <button type="submit" class="btn btn-outline-primary">Move</button>
+                        </div>
+                    </form>
+                    <div class="form-text mt-2">The habitat must match the species, and the enclosure must have free space.</div>
+                </div>
+            </div>
+
+            <form th:action="@{/admin/animals/{id}/delete(id=${animal.id()})}" method="post" class="mt-4 text-end"
+                  onsubmit="return confirm('Delete this animal? This cannot be undone.');">
+                <button type="submit" class="btn btn-outline-danger btn-sm">Delete animal</button>
+            </form>
         </div>
     </div>
 </main>

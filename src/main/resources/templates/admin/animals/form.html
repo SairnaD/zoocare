@@ -1,17 +1,16 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head('New animal')}"></head>
+<head th:replace="~{fragments/layout :: head(${animalId != null} ? 'Edit animal' : 'New animal')}"></head>
 <body>
 <nav th:replace="~{fragments/layout :: navbar}"></nav>
 
 <main class="container py-4">
-    <form th:action="@{/admin/animals}" th:object="${animalRequest}" method="post" novalidate
+    <form th:action="${animalId != null} ? @{/admin/animals/{id}(id=${animalId})} : @{/admin/animals}"
+          th:object="${animalRequest}" method="post" novalidate
           class="card zc-form-card">
-
         <div class="card-header bg-transparent py-3">
-            <h1 class="h5 mb-0">New animal</h1>
+            <h1 class="h5 mb-0" th:text="${animalId != null} ? 'Edit animal' : 'New animal'">New animal</h1>
         </div>
-
         <div class="card-body">
             <div class="mb-3">
                 <label for="name" class="form-label fw-semibold">Name</label>
