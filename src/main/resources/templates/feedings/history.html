@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Feeding history')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <h1 class="h3 mb-0">Feeding history</h1>
+        <span class="text-secondary small" th:text="|Last 7 days · All times: ${displayZone}|">Last 7 days</span>
+    </div>
+
+    <div th:if="${#lists.isEmpty(groups)}" class="card zc-empty">
+        <span class="zc-empty-icon" aria-hidden="true"><i class="bi bi-clock-history"></i></span>
+        <h2 class="h5 mb-0">No feedings in the last 7 days.</h2>
+    </div>
+
+    <div th:unless="${#lists.isEmpty(groups)}" class="card overflow-hidden">
+        <div class="card-header bg-transparent py-3 d-flex justify-content-between align-items-center">
+            <h2 class="h5 mb-0">All animals
+                <span class="text-secondary fw-medium" th:text="|(${#lists.size(groups)})|">(0)</span>
+            </h2>
+            <span class="text-secondary small">Newest first</span>
+        </div>
+
+        <!-- Desktop / tablet: table -->
+        <div class="table-responsive d-none d-md-block">
+            <table class="table align-middle mb-0" style="table-layout: fixed; min-width: 900px">
+                <colgroup>
+                    <col style="width: 10%">
+                    <col style="width: 10%">
+                    <col style="width: 11%">
+                    <col style="width: 14%">
+                    <col style="width: 9%">
+                    <col style="width: 8%">
+                    <col style="width: 12%">
+                    <col>
+                    <col style="width: 56px">
+                </colgroup>
+                <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Species</th>
+                    <th scope="col">Enclosure</th>
+                    <th scope="col">Fed at</th>
+                    <th scope="col">Food type</th>
+                    <th scope="col">Amount</th>
+                    <th scope="col">Fed by</th>
+                    <th scope="col">Notes</th>
+                    <th scope="col"></th>
+                </tr>
+                </thead>
+                <tbody th:each="group : ${groups}" th:with="latest=${group.latest()}">
+                <tr>
+                    <td class="fw-semibold text-break" th:text="${latest.animalName()}">Zuri</td>
+                    <td class="text-break" th:text="${latest.speciesName()}">Giraffe</td>
+                    <td><span class="chip" th:text="${latest.enclosureName()}">Savanna 2</span></td>
+                    <td th:text="${#temporals.format(latest.fedAt().atZone(displayZone), 'dd.MM.yyyy HH:mm')}">05.11.2026 09:00</td>
+                    <td class="text-break" th:text="${latest.food()}">Hay</td>
+                    <td th:text="|${latest.amountKg().stripTrailingZeros().toPlainString()} kg|">12 kg</td>
+                    <td class="text-break" th:text="${latest.recordedByName()}">Anna Berzina</td>
+                    <td class="text-break" th:text="${latest.note() ?: '—'}">Ate all the hay</td>
+                    <td class="text-end">
+                        <button th:unless="${#lists.isEmpty(group.earlier())}" type="button"
+                                class="btn btn-outline-secondary btn-sm feeding-toggle collapsed"
+                                data-bs-toggle="collapse" aria-expanded="false" aria-label="Show earlier feedings"
+                                th:attr="data-bs-target=|.feedings-${latest.id()}|">
+                            <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                        </button>
+                    </td>
+                </tr>
+                <tr th:each="feeding : ${group.earlier()}" class="collapse text-secondary"
+                    th:classappend="|feedings-${latest.id()}|">
+                    <td colspan="3"></td>
+                    <td th:text="${#temporals.format(feeding.fedAt().atZone(displayZone), 'dd.MM.yyyy HH:mm')}">04.11.2026 09:00</td>
+                    <td class="text-break" th:text="${feeding.food()}">Hay</td>
+                    <td th:text="|${feeding.amountKg().stripTrailingZeros().toPlainString()} kg|">11 kg</td>
+                    <td class="text-break" th:text="${feeding.recordedByName()}">Anna Berzina</td>
+                    <td class="text-break" th:text="${feeding.note() ?: '—'}">—</td>
+                    <td></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Phone: stacked list -->
+        <div class="d-md-none">
+            <div class="d-flex justify-content-between px-3 py-2 border-bottom small fw-semibold text-uppercase text-secondary">
+                <span>Animal &amp; feeding</span>
+                <span>Fed at</span>
+            </div>
+            <div th:each="group : ${groups}" th:with="latest=${group.latest()}" class="border-bottom">
+                <div class="d-flex justify-content-between gap-3 px-3 py-3">
+                    <div class="text-break">
+                        <div class="fw-semibold" th:text="${latest.animalName()}">Zuri</div>
+                        <div class="small text-secondary"
+                             th:text="|${latest.speciesName()} · ${latest.enclosureName()}|">Giraffe · Savanna 2</div>
+                        <div class="small fw-medium"
+                             th:text="|${latest.food()} · ${latest.amountKg().stripTrailingZeros().toPlainString()} kg · by ${latest.recordedByName()}|">
+                            Hay · 12 kg · by Anna Berzina</div>
+                        <div th:if="${latest.note() != null}" class="small fst-italic text-secondary"
+                             th:text="${latest.note()}">Ate all the hay</div>
+                    </div>
+                    <div class="text-end flex-shrink-0">
+                        <div class="fw-semibold"
+                             th:text="${#temporals.format(latest.fedAt().atZone(displayZone), 'HH:mm')}">09:00</div>
+                        <div class="small text-secondary"
+                             th:text="${#temporals.format(latest.fedAt().atZone(displayZone), 'dd.MM.yyyy')}">05.11.2026</div>
+                        <button th:unless="${#lists.isEmpty(group.earlier())}" type="button"
+                                class="btn btn-outline-secondary btn-sm feeding-toggle collapsed mt-2"
+                                data-bs-toggle="collapse" aria-expanded="false" aria-label="Show earlier feedings"
+                                th:attr="data-bs-target=|.feedings-mobile-${latest.id()}|">
+                            <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+                <div th:each="feeding : ${group.earlier()}" class="collapse"
+                     th:classappend="|feedings-mobile-${latest.id()}|">
+                    <div class="d-flex justify-content-between gap-3 px-3 py-2 border-top text-secondary small">
+                        <div class="text-break">
+                            <div class="fw-medium"
+                                 th:text="|${feeding.food()} · ${feeding.amountKg().stripTrailingZeros().toPlainString()} kg · by ${feeding.recordedByName()}|">
+                                Hay · 11 kg · by Anna Berzina</div>
+                            <div th:if="${feeding.note() != null}" class="fst-italic" th:text="${feeding.note()}">Note</div>
+                        </div>
+                        <div class="text-end flex-shrink-0">
+                            <div class="fw-semibold"
+                                 th:text="${#temporals.format(feeding.fedAt().atZone(displayZone), 'HH:mm')}">09:00</div>
+                            <div th:text="${#temporals.format(feeding.fedAt().atZone(displayZone), 'dd.MM.yyyy')}">04.11.2026</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .feeding-toggle .bi { display: inline-block; transition: transform .2s; }
+        .feeding-toggle:not(.collapsed) .bi { transform: rotate(180deg); }
+    </style>
+</main>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

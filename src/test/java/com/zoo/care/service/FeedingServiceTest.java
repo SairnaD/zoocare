@@ -1,5 +1,7 @@
 package com.zoo.care.service;
 
+import com.zoo.care.dto.AnimalFeedingGroup;
+import com.zoo.care.dto.FeedingHistoryResponse;
 import com.zoo.care.dto.FeedingRequest;
 import com.zoo.care.dto.FeedingResponse;
 import com.zoo.care.entity.*;
@@ -21,6 +23,8 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
@@ -195,6 +199,74 @@ class FeedingServiceTest {
         verify(clock, times(1)).instant();
     }
 
+    @Test
+    void admin_overviewReadsAllFeedingsOfLast7DaysWithoutAssignmentCheck() {
+        keeper.setRole(Role.ADMIN);
+        when(users.findByUsername("ben")).thenReturn(Optional.of(keeper));
+        when(feedings.findByFedAtGreaterThanEqualOrderByFedAtDescIdDesc(NOW.minus(7, ChronoUnit.DAYS)))
+                .thenReturn(List.of());
+
+        assertThat(service.getFeedingOverview("ben")).isEmpty();
+        verifyNoInteractions(assignments);
+    }
+
+    @Test
+    void keeper_overviewReadsFeedingsOfEnclosuresFromActiveAssignments() {
+        when(users.findByUsername("ben")).thenReturn(Optional.of(keeper));
+        when(assignments.findActiveByKeeper(7L, NOW)).thenReturn(List.of(assignment(2L), assignment(3L)));
+        Feedings feeding = overviewFeeding(10L, namedAnimal(5L, "Zuri"), NOW.minusSeconds(3600));
+        when(feedings.findByAnimalEnclosureIdInAndFedAtGreaterThanEqualOrderByFedAtDescIdDesc(
+                List.of(2L, 3L), NOW.minus(7, ChronoUnit.DAYS))).thenReturn(List.of(feeding));
+
+        List<AnimalFeedingGroup> overview = service.getFeedingOverview("ben");
+
+        assertThat(overview).containsExactly(new AnimalFeedingGroup(
+                new FeedingHistoryResponse(10L, "Zuri", "Giraffe", "Savanna 2", NOW.minusSeconds(3600),
+                        "Hay", BigDecimal.ONE, "Ate all the hay", "Ann Lee"),
+                List.of()));
+    }
+
+    @Test
+    void keeperWithoutAssignments_getsEmptyOverviewWithoutReadingFeedings() {
+        when(users.findByUsername("ben")).thenReturn(Optional.of(keeper));
+        when(assignments.findActiveByKeeper(7L, NOW)).thenReturn(List.of());
+
+        assertThat(service.getFeedingOverview("ben")).isEmpty();
+        verifyNoInteractions(feedings);
+    }
+
+    @Test
+    void overview_groupsFeedingsByAnimalKeepingNewestFirst() {
+        keeper.setRole(Role.ADMIN);
+        when(users.findByUsername("ben")).thenReturn(Optional.of(keeper));
+        Animal zuri = namedAnimal(5L, "Zuri");
+        Animal nala = namedAnimal(6L, "Nala");
+        when(feedings.findByFedAtGreaterThanEqualOrderByFedAtDescIdDesc(NOW.minus(7, ChronoUnit.DAYS)))
+                .thenReturn(List.of(
+                        overviewFeeding(1L, zuri, NOW.minusSeconds(3600)),
+                        overviewFeeding(2L, nala, NOW.minusSeconds(7200)),
+                        overviewFeeding(3L, zuri, NOW.minusSeconds(10800)),
+                        overviewFeeding(4L, nala, NOW.minusSeconds(14400)),
+                        overviewFeeding(5L, zuri, NOW.minusSeconds(18000))));
+
+        List<AnimalFeedingGroup> overview = service.getFeedingOverview("ben");
+
+        assertThat(overview).hasSize(2);
+        assertThat(overview.get(0).latest().id()).isEqualTo(1L);
+        assertThat(overview.get(0).earlier()).extracting(FeedingHistoryResponse::id).containsExactly(3L, 5L);
+        assertThat(overview.get(1).latest().id()).isEqualTo(2L);
+        assertThat(overview.get(1).earlier()).extracting(FeedingHistoryResponse::id).containsExactly(4L);
+    }
+
+    @Test
+    void missingCurrentUser_isDeniedOverview() {
+        when(users.findByUsername("ben")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getFeedingOverview("ben"))
+                .isInstanceOf(AccessDeniedException.class).hasMessage("Current user not found");
+        verifyNoInteractions(assignments, feedings);
+    }
+
     private FeedingRequest request() {
         return new FeedingRequest("Hay", new BigDecimal("0.750"), null);
     }
@@ -224,5 +296,22 @@ class FeedingServiceTest {
             feeding.setId(20L);
             return feeding;
         });
+    }
+
+    private KeeperAssignment assignment(Long enclosureId) {
+        return KeeperAssignment.builder().enclosure(Enclosure.builder().id(enclosureId).build()).build();
+    }
+
+    private Animal namedAnimal(Long id, String name) {
+        return Animal.builder().id(id).name(name)
+                .species(Species.builder().name("Giraffe").build())
+                .enclosure(Enclosure.builder().id(2L).name("Savanna 2").build())
+                .build();
+    }
+
+    private Feedings overviewFeeding(Long id, Animal animal, Instant fedAt) {
+        return Feedings.builder().id(id).animal(animal)
+                .recordedBy(User.builder().id(8L).fullName("Ann Lee").build())
+                .food("Hay").amountKg(BigDecimal.ONE).fedAt(fedAt).note("Ate all the hay").build();
     }
 }
