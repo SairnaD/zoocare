@@ -1,6 +1,8 @@
 package com.zoo.care.repository;
 
+import com.zoo.care.dto.EnclosureAnimalCount;
 import com.zoo.care.entity.Animal;
+import com.zoo.care.entity.DeletedStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -38,4 +40,12 @@ public interface AnimalRepository extends JpaRepository<Animal, Long> {
     boolean existsBySpeciesId(Long speciesId);
 
     boolean existsByNameIgnoreCaseAndIdNot(String name, Long id);
+
+    @Query("""
+        select new com.zoo.care.dto.EnclosureAnimalCount(a.enclosure.id, count(a))
+        from Animal a
+        where a.deletedStatus = :status
+        group by a.enclosure.id
+        """)
+    List<EnclosureAnimalCount> countAnimalsPerEnclosure(@Param("status") DeletedStatus status);
 }

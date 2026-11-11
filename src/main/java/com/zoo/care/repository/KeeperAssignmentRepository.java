@@ -62,9 +62,10 @@ public interface KeeperAssignmentRepository extends JpaRepository<KeeperAssignme
     @Query("""
         select a from KeeperAssignment a
         join fetch a.keeper
+        join fetch a.enclosure
         where a.startsAt <= :moment
           and (a.endsAt is null or a.endsAt > :moment)
-        order by a.keeper.fullName
+        order by a.keeper.fullName, a.enclosure.name
         """)
     List<KeeperAssignment> findAllActive(@Param("moment") Instant moment);
 
