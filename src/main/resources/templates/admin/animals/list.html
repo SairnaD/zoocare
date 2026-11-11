@@ -35,6 +35,7 @@
                     <th scope="col">Enclosure</th>
                     <th scope="col">Birth date</th>
                     <th scope="col">Feeding every</th>
+                    <th scope="col" class="text-end">Actions</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -46,6 +47,19 @@
                     <td th:text="${animal.enclosureName()}">Savanna 1</td>
                     <td th:text="${animal.birthDate()}">2020-05-01</td>
                     <td th:text="|${animal.feedingIntervalHours()} h|">6 h</td>
+                    <td class="text-end">
+                        <div class="d-inline-flex gap-2">
+                            <a th:href="@{/admin/animals/{id}(id=${animal.id()})}"
+                               class="btn btn-outline-secondary btn-sm">Details</a>
+                            <a th:href="@{/admin/animals/{id}/edit(id=${animal.id()})}"
+                               class="btn btn-outline-secondary btn-sm">Edit</a>
+                            <form th:action="@{/admin/animals/{id}/delete(id=${animal.id()})}"
+                                  method="post"
+                                  onsubmit="return confirm('Delete this animal? This cannot be undone.');">
+                                <button type="submit" class="btn btn-outline-danger btn-sm">Delete</button>
+                            </form>
+                        </div>
+                    </td>
                 </tr>
                 </tbody>
             </table>
