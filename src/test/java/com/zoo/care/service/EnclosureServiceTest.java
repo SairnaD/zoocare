@@ -233,6 +233,18 @@ class EnclosureServiceTest {
     }
 
     @Test
+    void assignKeeper_deletedKeeper_throwsNotFound() {
+        User deleted = keeper();
+        deleted.setDeletedStatus(DeletedStatus.DELETED);
+        when(enclosureRepository.findById(1L)).thenReturn(Optional.of(existingSavanna()));
+        when(userRepository.findById(7L)).thenReturn(Optional.of(deleted));
+
+        assertThatThrownBy(() -> enclosureService.assignKeeper(1L, 7L))
+                .isInstanceOf(ResourceNotFoundException.class);
+        verify(keeperAssignmentRepository, never()).save(any());
+    }
+
+    @Test
     void assignKeeper_alreadyAssigned_throwsBusinessRuleException() {
         when(enclosureRepository.findById(1L)).thenReturn(Optional.of(existingSavanna()));
         when(userRepository.findById(7L)).thenReturn(Optional.of(keeper()));
