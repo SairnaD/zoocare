@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Keepers')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container py-4">
+    <h1 class="h3 mb-4">Keepers</h1>
+
+    <th:block th:replace="~{fragments/layout :: alerts}"></th:block>
+
+    <div th:if="${#lists.isEmpty(keepers)}" class="card zc-empty">
+        <span class="zc-empty-icon" aria-hidden="true"><i class="bi bi-people"></i></span>
+        <h2 class="h5 mb-1">No keepers yet</h2>
+        <p class="text-secondary mb-0">Keepers appear here after they register.</p>
+    </div>
+
+    <div th:unless="${#lists.isEmpty(keepers)}" class="card overflow-hidden">
+        <div class="card-header bg-transparent py-3">
+            <h2 class="h5 mb-0">All keepers
+                <span class="text-secondary fw-medium" th:text="|(${#lists.size(keepers)})|">(4)</span>
+            </h2>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                <tr>
+                    <th scope="col">Keeper</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Enclosures</th>
+                    <th scope="col">Animals</th>
+                    <th scope="col" class="text-end">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="keeper : ${keepers}">
+                    <td>
+                        <div class="fw-semibold" th:text="${keeper.fullName}">Anna Berzina</div>
+                        <div class="small text-secondary" th:text="${keeper.username}">anna</div>
+                    </td>
+                    <td th:text="${keeper.email}">anna.berzina@zoo.lv</td>
+                    <td>
+                        <span th:if="${#lists.isEmpty(keeper.enclosures)}" class="text-secondary">No enclosure</span>
+                        <div th:unless="${#lists.isEmpty(keeper.enclosures)}" class="d-flex flex-wrap gap-1">
+                            <span th:each="enclosure : ${keeper.enclosures}" class="chip"
+                                  th:classappend="|chip-${#strings.toLowerCase(enclosure.habitatType)}|"
+                                  th:text="${enclosure.name}">Savanna 1</span>
+                        </div>
+                    </td>
+                    <td th:text="${keeper.animalCount}">5</td>
+                    <td class="text-end">
+                        <div class="d-inline-flex gap-2">
+                            <form th:action="@{/admin/keepers/{id}/make-admin(id=${keeper.id})}" method="post"
+                                  onsubmit="return confirm('Make this keeper an admin?');">
+                                <button type="submit" class="btn btn-outline-secondary btn-sm">Make admin</button>
+                            </form>
+                            <form th:action="@{/admin/keepers/{id}/delete(id=${keeper.id})}" method="post"
+                                  onsubmit="return confirm('Delete this keeper?');">
+                                <button type="submit" class="btn btn-outline-danger btn-sm">Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>
