@@ -4,10 +4,7 @@ import com.zoo.care.dto.EnclosureRequest;
 import com.zoo.care.dto.EnclosureResponse;
 import com.zoo.care.dto.KeeperAssignmentResponse;
 import com.zoo.care.dto.KeeperResponse;
-import com.zoo.care.entity.Enclosure;
-import com.zoo.care.entity.KeeperAssignment;
-import com.zoo.care.entity.Role;
-import com.zoo.care.entity.User;
+import com.zoo.care.entity.*;
 import com.zoo.care.exception.*;
 import com.zoo.care.repository.AnimalRepository;
 import com.zoo.care.repository.EnclosureRepository;
@@ -142,7 +139,7 @@ public class EnclosureService {
     }
 
     public List<KeeperResponse> findAllKeepers() {
-        return userRepository.findAllByRoleOrderByFullNameAsc(Role.KEEPER).stream()
+        return userRepository.findAllByRoleAndDeletedStatusOrderByFullName(Role.KEEPER, DeletedStatus.PRESENT).stream()
                 .map(KeeperResponse::from)
                 .toList();
     }
@@ -154,6 +151,7 @@ public class EnclosureService {
 
     private User getKeeper(Long keeperId) {
         User keeper = userRepository.findById(keeperId)
+                .filter(user -> user.getDeletedStatus() == DeletedStatus.PRESENT)
                 .orElseThrow(() -> new ResourceNotFoundException("User", keeperId));
         if (keeper.getRole() != Role.KEEPER) {
             throw new UserIsNotKeeperException();

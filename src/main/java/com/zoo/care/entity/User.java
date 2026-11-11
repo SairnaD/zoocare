@@ -3,6 +3,7 @@ package com.zoo.care.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 
 @Entity
 @Table(name = "users")
@@ -32,4 +33,10 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Role role;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "deleted_status", nullable = false, length = 20)
+    @ColumnDefault("'PRESENT'")
+    @Builder.Default
+    private DeletedStatus deletedStatus = DeletedStatus.PRESENT;
 }
