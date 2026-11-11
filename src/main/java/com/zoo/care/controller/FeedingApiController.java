@@ -71,6 +71,7 @@ public class FeedingApiController {
         return feedingService.recordFeeding(
                 animalId,
                 request,
-                authentication.getName());
+                authentication.getName(),
+                null);
     }
 }

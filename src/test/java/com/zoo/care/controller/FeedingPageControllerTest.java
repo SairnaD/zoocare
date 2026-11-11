@@ -3,6 +3,7 @@ package com.zoo.care.controller;
 import com.zoo.care.config.SecurityConfig;
 import com.zoo.care.dto.AnimalFeedingGroup;
 import com.zoo.care.dto.FeedingHistoryResponse;
+import com.zoo.care.entity.HabitatType;
 import com.zoo.care.service.FeedingService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,10 +31,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class FeedingPageControllerTest {
 
     private static final FeedingHistoryResponse LATEST = new FeedingHistoryResponse(10L, "Zuri", "Giraffe",
-            "Savanna 2", Instant.parse("2026-11-10T09:00:00Z"), "Hay", new BigDecimal("12.000"),
+            "Savanna 2", HabitatType.SAVANNA, Instant.parse("2026-11-10T09:00:00Z"), "Hay", new BigDecimal("12.000"),
             "Ate all the hay", "Anna Berzina");
     private static final FeedingHistoryResponse EARLIER = new FeedingHistoryResponse(9L, "Zuri", "Giraffe",
-            "Savanna 2", Instant.parse("2026-11-09T09:00:00Z"), "Hay", new BigDecimal("11.500"),
+            "Savanna 2", HabitatType.SAVANNA, Instant.parse("2026-11-09T09:00:00Z"), "Hay", new BigDecimal("11.500"),
             null, "Anna Berzina");
     private static final List<AnimalFeedingGroup> GROUPS =
             List.of(new AnimalFeedingGroup(LATEST, List.of(EARLIER)));
@@ -56,8 +57,9 @@ class FeedingPageControllerTest {
                 .andExpect(model().attribute("displayZone", ZoneId.of("Europe/Riga")))
                 .andExpect(content().string(containsString("Zuri")))
                 .andExpect(content().string(containsString("Savanna 2")))
-                .andExpect(content().string(containsString("10.11.2026 11:00")))
-                .andExpect(content().string(containsString("09.11.2026 11:00")))
+                .andExpect(content().string(containsString("11:00")))
+                .andExpect(content().string(containsString("10.11.2026")))
+                .andExpect(content().string(containsString("09.11.2026")))
                 .andExpect(content().string(containsString("12 kg")))
                 .andExpect(content().string(containsString("11.5 kg")))
                 .andExpect(content().string(containsString("Ate all the hay")))

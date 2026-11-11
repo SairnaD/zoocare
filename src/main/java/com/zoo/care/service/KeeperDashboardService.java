@@ -1,28 +1,18 @@
 package com.zoo.care.service;
 
-import com.zoo.care.dto.AnimalResponse;
-import com.zoo.care.dto.DueFeedingItem;
-import com.zoo.care.dto.EnclosureResponse;
-import com.zoo.care.dto.KeeperEnclosureView;
-import com.zoo.care.entity.Animal;
-import com.zoo.care.entity.DeletedStatus;
-import com.zoo.care.entity.Role;
-import com.zoo.care.entity.KeeperAssignment;
-import com.zoo.care.entity.User;
-import com.zoo.care.exception.ResourceNotFoundException;
+import com.zoo.care.dto.KeeperAnimalView;
+import com.zoo.care.entity.*;
 import com.zoo.care.repository.AnimalRepository;
 import com.zoo.care.repository.FeedingRepository;
-import com.zoo.care.repository.LastFeedingTime;
 import com.zoo.care.repository.KeeperAssignmentRepository;
 import com.zoo.care.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Clock;
-import java.time.Instant;
+import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.List;
@@ -40,12 +30,14 @@ public class KeeperDashboardService {
     private final AnimalRepository animalRepository;
     private final FeedingRepository feedingRepository;
 
+    private static final Duration FEED_SOON_WINDOW = Duration.ofHours(1);
+
     @PreAuthorize("hasRole('KEEPER')")
-    public List<DueFeedingItem> findDueForKeeper(String username) {
+    public List<KeeperAnimalView> findAnimalsForKeeper(String username) {
         User keeper = userRepository.findByUsername(username)
                 .orElseThrow(() -> new AccessDeniedException("Current user not found"));
         if (keeper.getRole() != Role.KEEPER) {
-            throw new AccessDeniedException("Only keepers can view animals due for feeding");
+            throw new AccessDeniedException("Only keepers can view their animals");
         }
 
         Instant now = Instant.now(clock);
@@ -61,49 +53,49 @@ public class KeeperDashboardService {
             return List.of();
         }
 
-        Map<Long, Instant> lastFeedingTimes = feedingRepository.findLastFeedingTimes(
+        Map<Long, Feedings> lastFeedings = feedingRepository.findLatestByAnimalIds(
                         animals.stream().map(Animal::getId).toList()).stream()
-                .collect(Collectors.toMap(LastFeedingTime::getAnimalId, LastFeedingTime::getLastFedAt));
+                .collect(Collectors.toMap(feeding -> feeding.getAnimal().getId(), feeding -> feeding,
+                        (first, second) -> first.getId() > second.getId() ? first : second));
 
-        return animals.stream().map(animal -> {
-                    Instant lastFedAt = lastFeedingTimes.get(animal.getId());
-                    Instant nextAllowedAt = lastFedAt == null ? null
-                            : lastFedAt.plus(animal.getFeedingIntervalHours(), ChronoUnit.HOURS);
-                    return new DueFeedingItem(animal.getId(), animal.getName(),
-                            animal.getSpecies().getName(), animal.getEnclosure().getName(),
-                            animal.getFeedingIntervalHours(), lastFedAt, nextAllowedAt);
-                })
-                .filter(item -> item.nextAllowedAt() == null || !now.isBefore(item.nextAllowedAt()))
-                .sorted(Comparator.comparing(DueFeedingItem::nextAllowedAt,
+        LocalDate today = LocalDate.now(clock);
+        return animals.stream()
+                .map(animal -> toView(animal, lastFeedings.get(animal.getId()), now, today))
+                .sorted(Comparator.comparing(KeeperAnimalView::status)
+                        .thenComparing(KeeperAnimalView::nextFeedingAt,
                                 Comparator.nullsFirst(Comparator.naturalOrder()))
-                        .thenComparing(DueFeedingItem::animalName, String.CASE_INSENSITIVE_ORDER)
-                        .thenComparing(DueFeedingItem::animalId))
+                        .thenComparing(KeeperAnimalView::animalName, String.CASE_INSENSITIVE_ORDER))
                 .toList();
     }
 
+    private KeeperAnimalView toView(Animal animal, Feedings lastFeeding, Instant now, LocalDate today) {
+        Instant lastFedAt = lastFeeding == null ? null : lastFeeding.getFedAt();
+        Instant nextFeedingAt = lastFedAt == null ? null
+                : lastFedAt.plus(animal.getFeedingIntervalHours(), ChronoUnit.HOURS);
+        return new KeeperAnimalView(
+                animal.getId(),
+                animal.getName(),
+                animal.getSpecies().getName(),
+                animal.getEnclosure().getName(),
+                animal.getEnclosure().getHabitatType(),
+                animal.getBirthDate(),
+                Period.between(animal.getBirthDate(), today).getYears(),
+                animal.getWeight(),
+                animal.getDescription(),
+                animal.getFeedingIntervalHours(),
+                lastFedAt,
+                lastFeeding == null ? null : lastFeeding.getRecordedBy().getFullName(),
+                nextFeedingAt,
+                statusOf(nextFeedingAt, now));
+    }
 
-    public List<KeeperEnclosureView> findForKeeper(String username) {
-        User keeper = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("Keeper '" + username + "' not found"));
-
-        List<KeeperAssignment> assignments = keeperAssignmentRepository.findActiveByKeeper(keeper.getId(), Instant.now(clock));
-        if (assignments.isEmpty()) {
-            return List.of();
+    private FeedingStatus statusOf(Instant nextFeedingAt, Instant now) {
+        if (nextFeedingAt == null || !now.isBefore(nextFeedingAt)) {
+            return FeedingStatus.NEED_TO_FEED;
         }
-        List<Long> enclosureIds = assignments.stream()
-                .map(assignment -> assignment.getEnclosure().getId())
-                .toList();
-        List<Animal> animals = animalRepository.findByEnclosureIdInOrderByNameAsc(enclosureIds);
-
-        Map<Long, List<AnimalResponse>> animalsByEnclosure = animals.stream()
-                .collect(Collectors.groupingBy(
-                        animal -> animal.getEnclosure().getId(),
-                        Collectors.mapping(AnimalResponse::from, Collectors.toList())));
-
-        return assignments.stream()
-                .map(assignment -> new KeeperEnclosureView(
-                        EnclosureResponse.from(assignment.getEnclosure()),
-                        animalsByEnclosure.getOrDefault(assignment.getEnclosure().getId(), List.of())))
-                .toList();
+        if (!now.plus(FEED_SOON_WINDOW).isBefore(nextFeedingAt)) {
+            return FeedingStatus.FEED_SOON;
+        }
+        return FeedingStatus.FED;
     }
 }
