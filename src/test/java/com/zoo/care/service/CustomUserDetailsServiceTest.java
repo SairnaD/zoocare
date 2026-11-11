@@ -1,5 +1,6 @@
 package com.zoo.care.service;
 
+import com.zoo.care.entity.DeletedStatus;
 import com.zoo.care.entity.Role;
 import com.zoo.care.entity.User;
 import com.zoo.care.repository.UserRepository;
@@ -14,6 +15,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
@@ -46,6 +48,7 @@ class CustomUserDetailsServiceTest {
         assertEquals(1, details.getAuthorities().size());
         assertTrue(details.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_KEEPER")));
+        assertTrue(details.isEnabled());
     }
 
     @Test
@@ -73,5 +76,15 @@ class CustomUserDetailsServiceTest {
                 () -> customUserDetailsService.loadUserByUsername("Ben"));
 
         assertEquals("User not found: Ben", e.getMessage());
+    }
+
+    @Test
+    void loadUserByUsername_deletedUserIsDisabled() {
+        user.setDeletedStatus(DeletedStatus.DELETED);
+        when(userRepository.findByUsername("Ben")).thenReturn(Optional.of(user));
+
+        UserDetails details = customUserDetailsService.loadUserByUsername("Ben");
+
+        assertFalse(details.isEnabled());
     }
 }
