@@ -9,6 +9,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@ActiveProfiles("h2")
 @SpringBootTest(properties = {
         "spring.datasource.url=jdbc:h2:mem:due-feeding-flow;MODE=PostgreSQL;DB_CLOSE_DELAY=-1",
         "spring.jpa.hibernate.ddl-auto=create-drop"

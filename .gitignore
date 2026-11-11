@@ -4,6 +4,8 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 uploads/
+.env
+docker-compose.yml
 
 ### STS ###
 .apt_generated
