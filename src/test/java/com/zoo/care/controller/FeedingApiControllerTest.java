@@ -43,7 +43,7 @@ class FeedingApiControllerTest {
     @Test
     @WithMockUser(username = "ben", roles = "KEEPER")
     void validRequest_returns201AndPassesAuthenticatedUsername() throws Exception {
-        when(service.recordFeeding(eq(5L), any(), eq("ben")))
+        when(service.recordFeeding(eq(5L), any(), eq("ben"), isNull()))
                 .thenReturn(new FeedingResponse(20L, 5L, 7L, "Hay",
                         new BigDecimal("0.750"), NOW, "Ate normally"));
         // /api/** currently ignores CSRF; use the real SecurityConfig without adding a token.
@@ -58,7 +58,7 @@ class FeedingApiControllerTest {
                 .andExpect(jsonPath("$.fedAt").value(NOW.toString()))
                 .andExpect(jsonPath("$.note").value("Ate normally"));
         verify(service).recordFeeding(5L,
-                new FeedingRequest("Hay", new BigDecimal("0.750"), "Ate normally"), "ben");
+                new FeedingRequest("Hay", new BigDecimal("0.750"), "Ate normally"), "ben", null);
     }
 
     @ParameterizedTest(name = "invalid {0}: {1}")
@@ -109,25 +109,25 @@ class FeedingApiControllerTest {
     void maximumLengthsAndAmount_areAccepted() throws Exception {
         String food = "x".repeat(100);
         String note = "x".repeat(500);
-        when(service.recordFeeding(eq(5L), any(), eq("ben")))
+        when(service.recordFeeding(eq(5L), any(), eq("ben"), isNull()))
                 .thenReturn(new FeedingResponse(20L, 5L, 7L, food,
                         new BigDecimal("9999999.999"), NOW, note));
         mvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"food\":\"" + food + "\",\"amountKg\":9999999.999,\"note\":\"" + note + "\"}"))
                 .andExpect(status().isCreated());
         verify(service).recordFeeding(5L,
-                new FeedingRequest(food, new BigDecimal("9999999.999"), note), "ben");
+                new FeedingRequest(food, new BigDecimal("9999999.999"), note), "ben", null);
     }
 
     @Test
     @WithMockUser(username = "ben", roles = "KEEPER")
     void omittedNoteAndSmallestAmount_areAccepted() throws Exception {
-        when(service.recordFeeding(eq(5L), any(), eq("ben")))
+        when(service.recordFeeding(eq(5L), any(), eq("ben"), isNull()))
                 .thenReturn(new FeedingResponse(20L, 5L, 7L, "Hay", new BigDecimal("0.001"), NOW, null));
         mvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"food\":\"Hay\",\"amountKg\":0.001}"))
                 .andExpect(status().isCreated());
-        verify(service).recordFeeding(5L, new FeedingRequest("Hay", new BigDecimal("0.001"), null), "ben");
+        verify(service).recordFeeding(5L, new FeedingRequest("Hay", new BigDecimal("0.001"), null), "ben", null);
     }
 
     @ParameterizedTest
@@ -147,7 +147,7 @@ class FeedingApiControllerTest {
     @Test
     @WithMockUser(username = "ben", roles = "KEEPER")
     void missingAnimal_returns404() throws Exception {
-        when(service.recordFeeding(eq(5L), any(), eq("ben")))
+        when(service.recordFeeding(eq(5L), any(), eq("ben"), isNull()))
                 .thenThrow(new ResourceNotFoundException("Animal", 5L));
         mvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON).content(VALID_JSON))
                 .andExpect(status().isNotFound())
@@ -158,7 +158,7 @@ class FeedingApiControllerTest {
     @WithMockUser(username = "ben", roles = "KEEPER")
     void intervalViolation_returns409WithNextAllowedTime() throws Exception {
         String message = "Animal can be fed again at " + NOW.plusSeconds(3600);
-        when(service.recordFeeding(eq(5L), any(), eq("ben")))
+        when(service.recordFeeding(eq(5L), any(), eq("ben"), isNull()))
                 .thenThrow(new FeedingTooEarlyException(NOW.plusSeconds(3600)));
         mvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON).content(VALID_JSON))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.message").value(message));
@@ -167,7 +167,7 @@ class FeedingApiControllerTest {
     @Test
     @WithMockUser(username = "ben", roles = "KEEPER")
     void deletedAnimal_returns409() throws Exception {
-        when(service.recordFeeding(eq(5L), any(), eq("ben")))
+        when(service.recordFeeding(eq(5L), any(), eq("ben"), isNull()))
                 .thenThrow(new AnimalDeletedException());
         mvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON).content(VALID_JSON))
                 .andExpect(status().isConflict())
@@ -177,7 +177,7 @@ class FeedingApiControllerTest {
     @Test
     @WithMockUser(username = "ben", roles = "KEEPER")
     void unassignedKeeper_returns403() throws Exception {
-        when(service.recordFeeding(eq(5L), any(), eq("ben")))
+        when(service.recordFeeding(eq(5L), any(), eq("ben"), isNull()))
                 .thenThrow(new AccessDeniedException("Not assigned"));
         mvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON).content(VALID_JSON))
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.message").value("Access denied"));

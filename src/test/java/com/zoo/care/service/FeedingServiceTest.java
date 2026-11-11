@@ -6,6 +6,8 @@ import com.zoo.care.dto.FeedingRequest;
 import com.zoo.care.dto.FeedingResponse;
 import com.zoo.care.entity.*;
 import com.zoo.care.exception.BusinessRuleException;
+import com.zoo.care.exception.FeedingTimeInFutureException;
+import com.zoo.care.exception.FeedingTooEarlyException;
 import com.zoo.care.exception.ResourceNotFoundException;
 import com.zoo.care.repository.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,10 +36,14 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class FeedingServiceTest {
     private static final Instant NOW = Instant.parse("2026-11-10T12:00:00Z");
-    @Mock private AnimalRepository animals;
-    @Mock private FeedingRepository feedings;
-    @Mock private UserRepository users;
-    @Mock private KeeperAssignmentRepository assignments;
+    @Mock
+    private AnimalRepository animals;
+    @Mock
+    private FeedingRepository feedings;
+    @Mock
+    private UserRepository users;
+    @Mock
+    private KeeperAssignmentRepository assignments;
     private FeedingService service;
     private User keeper;
     private Animal animal;
@@ -59,7 +65,7 @@ class FeedingServiceTest {
         returnSavedFeeding();
 
         FeedingResponse response = service.recordFeeding(5L,
-                new FeedingRequest("  Hay  ", new BigDecimal("0.750"), "  Ate normally  "), "ben");
+                new FeedingRequest("  Hay  ", new BigDecimal("0.750"), "  Ate normally  "), "ben", null);
 
         ArgumentCaptor<Feedings> captor = ArgumentCaptor.forClass(Feedings.class);
         verify(feedings).save(captor.capture());
@@ -86,7 +92,7 @@ class FeedingServiceTest {
         allowAccess();
         returnSavedFeeding();
         FeedingResponse response = service.recordFeeding(5L,
-                new FeedingRequest("Hay", new BigDecimal("0.750"), note), "ben");
+                new FeedingRequest("Hay", new BigDecimal("0.750"), note), "ben", null);
         assertThat(response.note()).isNull();
     }
 
@@ -96,7 +102,7 @@ class FeedingServiceTest {
         allowAccess();
         previousFeeding(NOW.minusSeconds(secondsSinceLastFeeding));
         returnSavedFeeding();
-        assertThat(service.recordFeeding(5L, request(), "ben").fedAt()).isEqualTo(NOW);
+        assertThat(service.recordFeeding(5L, request(), "ben", null).fedAt()).isEqualTo(NOW);
         verify(feedings).save(any(Feedings.class));
     }
 
@@ -105,7 +111,7 @@ class FeedingServiceTest {
         allowAccess();
         Feedings previous = previousFeeding(NOW.minusSeconds(21600).plusNanos(1));
         Instant originalTime = previous.getFedAt();
-        assertThatThrownBy(() -> service.recordFeeding(5L, request(), "ben"))
+        assertThatThrownBy(() -> service.recordFeeding(5L, request(), "ben", null))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessage("Animal can be fed again at " + NOW.plusNanos(1));
         verify(feedings, never()).save(any());
@@ -118,7 +124,7 @@ class FeedingServiceTest {
     void recentFeedingByAnotherKeeper_alsoPreventsFeeding() {
         allowAccess();
         previousFeeding(NOW.minusSeconds(3600));
-        assertThatThrownBy(() -> service.recordFeeding(5L, request(), "ben"))
+        assertThatThrownBy(() -> service.recordFeeding(5L, request(), "ben", null))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining(NOW.plusSeconds(18000).toString());
         verify(feedings, never()).save(any());
@@ -129,7 +135,7 @@ class FeedingServiceTest {
         allowAccess();
         animal.setFeedingIntervalHours(8);
         previousFeeding(NOW.minusSeconds(21600));
-        assertThatThrownBy(() -> service.recordFeeding(5L, request(), "ben"))
+        assertThatThrownBy(() -> service.recordFeeding(5L, request(), "ben", null))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining(NOW.plusSeconds(7200).toString());
         verify(feedings, never()).save(any());
@@ -139,7 +145,7 @@ class FeedingServiceTest {
     void keeperWithoutActiveAssignment_isDeniedBeforeReadingHistory() {
         loadUserAndAnimal();
         when(assignments.existsActiveAssignment(2L, 7L, NOW)).thenReturn(false);
-        assertThatThrownBy(() -> service.recordFeeding(5L, request(), "ben"))
+        assertThatThrownBy(() -> service.recordFeeding(5L, request(), "ben", null))
                 .isInstanceOf(AccessDeniedException.class);
         verifyNoInteractions(feedings);
     }
@@ -148,7 +154,7 @@ class FeedingServiceTest {
     void admin_isDeniedEvenWithoutSpringProxy() {
         loadUserAndAnimal();
         keeper.setRole(Role.ADMIN);
-        assertThatThrownBy(() -> service.recordFeeding(5L, request(), "ben"))
+        assertThatThrownBy(() -> service.recordFeeding(5L, request(), "ben", null))
                 .isInstanceOf(AccessDeniedException.class);
         verifyNoInteractions(assignments, feedings);
     }
@@ -156,7 +162,7 @@ class FeedingServiceTest {
     @Test
     void missingCurrentUser_isDeniedWithoutLoadingAnimal() {
         when(users.findByUsername("ben")).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.recordFeeding(5L, request(), "ben"))
+        assertThatThrownBy(() -> service.recordFeeding(5L, request(), "ben", null))
                 .isInstanceOf(AccessDeniedException.class).hasMessage("Current user not found");
         verifyNoInteractions(animals, assignments, feedings);
     }
@@ -165,7 +171,7 @@ class FeedingServiceTest {
     void missingAnimal_isNotFoundAndNothingIsSaved() {
         when(users.findByUsername("ben")).thenReturn(Optional.of(keeper));
         when(animals.findByIdForUpdate(5L)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.recordFeeding(5L, request(), "ben"))
+        assertThatThrownBy(() -> service.recordFeeding(5L, request(), "ben", null))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Animal with id 5 not found");
         verifyNoInteractions(assignments, feedings);
@@ -175,7 +181,7 @@ class FeedingServiceTest {
     void deletedAnimal_isRejectedForAnOtherwiseAuthorizedKeeper() {
         allowAccess();
         animal.setDeletedStatus(DeletedStatus.DELETED);
-        assertThatThrownBy(() -> service.recordFeeding(5L, request(), "ben"))
+        assertThatThrownBy(() -> service.recordFeeding(5L, request(), "ben", null))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessage("Cannot record a feeding for a deleted animal");
         verifyNoInteractions(feedings);
@@ -189,7 +195,7 @@ class FeedingServiceTest {
         allowAccess();
         when(clock.instant()).thenReturn(NOW);
         returnSavedFeeding();
-        service.recordFeeding(5L, request(), "ben");
+        service.recordFeeding(5L, request(), "ben", null);
         var order = inOrder(animals, clock, assignments, feedings);
         order.verify(animals).findByIdForUpdate(5L);
         order.verify(clock).instant();
@@ -221,8 +227,8 @@ class FeedingServiceTest {
         List<AnimalFeedingGroup> overview = service.getFeedingOverview("ben");
 
         assertThat(overview).containsExactly(new AnimalFeedingGroup(
-                new FeedingHistoryResponse(10L, "Zuri", "Giraffe", "Savanna 2", NOW.minusSeconds(3600),
-                        "Hay", BigDecimal.ONE, "Ate all the hay", "Ann Lee"),
+                new FeedingHistoryResponse(10L, "Zuri", "Giraffe", "Savanna 2", HabitatType.SAVANNA,
+                        NOW.minusSeconds(3600), "Hay", BigDecimal.ONE, "Ate all the hay", "Ann Lee"),
                 List.of()));
     }
 
@@ -266,6 +272,35 @@ class FeedingServiceTest {
                 .isInstanceOf(AccessDeniedException.class).hasMessage("Current user not found");
         verifyNoInteractions(assignments, feedings);
     }
+    @Test
+    void chosenTime_isSavedAndIntervalIsCountedFromIt() {
+        allowAccess();
+        previousFeeding(NOW.minusSeconds(8 * 3600));
+        returnSavedFeeding();
+        Instant chosen = NOW.minusSeconds(3600);
+
+        assertThat(service.recordFeeding(5L, request(), "ben", chosen).fedAt()).isEqualTo(chosen);
+    }
+
+    @Test
+    void chosenTimeTooCloseToLastFeeding_isRejected() {
+        allowAccess();
+        previousFeeding(NOW.minusSeconds(7 * 3600));
+
+        assertThatThrownBy(() -> service.recordFeeding(5L, request(), "ben", NOW.minusSeconds(2 * 3600)))
+                .isInstanceOf(FeedingTooEarlyException.class)
+                .hasMessage("Animal can be fed again at " + NOW.minusSeconds(3600));
+        verify(feedings, never()).save(any());
+    }
+
+    @Test
+    void futureTime_isRejectedBeforeReadingHistory() {
+        allowAccess();
+
+        assertThatThrownBy(() -> service.recordFeeding(5L, request(), "ben", NOW.plusSeconds(60)))
+                .isInstanceOf(FeedingTimeInFutureException.class);
+        verifyNoInteractions(feedings);
+    }
 
     private FeedingRequest request() {
         return new FeedingRequest("Hay", new BigDecimal("0.750"), null);
@@ -305,7 +340,7 @@ class FeedingServiceTest {
     private Animal namedAnimal(Long id, String name) {
         return Animal.builder().id(id).name(name)
                 .species(Species.builder().name("Giraffe").build())
-                .enclosure(Enclosure.builder().id(2L).name("Savanna 2").build())
+                .enclosure(Enclosure.builder().id(2L).name("Savanna 2").habitatType(HabitatType.SAVANNA).build())
                 .build();
     }
 

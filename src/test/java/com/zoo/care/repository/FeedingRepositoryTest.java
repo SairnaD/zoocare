@@ -11,8 +11,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -70,36 +68,6 @@ class FeedingRepositoryTest {
     }
 
     @Test
-    void lastTimes_areGroupedByRequestedAnimalAndIncludeOtherAuthors() {
-        var first = FeedingTestData.persist(em.getEntityManager(), NOW);
-        var second = FeedingTestData.persist(em.getEntityManager(), NOW);
-        var unrelated = FeedingTestData.persist(em.getEntityManager(), NOW);
-        persistFeeding(first, NOW.minusSeconds(3600), "Older");
-        Feedings latest = persistFeeding(first, NOW, "Latest by another keeper");
-        latest.setRecordedBy(first.secondKeeper());
-        persistFeeding(second, NOW.minusSeconds(7200), "Second animal");
-        persistFeeding(unrelated, NOW.plusSeconds(3600), "Not requested");
-        em.flush();
-        em.clear();
-
-        Map<Long, Instant> times = repository.findLastFeedingTimes(
-                        List.of(first.animal().getId(), second.animal().getId())).stream()
-                .collect(Collectors.toMap(LastFeedingTime::getAnimalId, LastFeedingTime::getLastFedAt));
-        assertThat(times).containsExactlyInAnyOrderEntriesOf(Map.of(
-                first.animal().getId(), NOW, second.animal().getId(), NOW.minusSeconds(7200)));
-    }
-
-    @Test
-    void lastTimes_omitAnimalsWithoutHistory() {
-        var neverFed = FeedingTestData.persist(em.getEntityManager(), NOW);
-        var other = FeedingTestData.persist(em.getEntityManager(), NOW);
-        persistFeeding(other, NOW, "Other");
-        em.flush();
-        em.clear();
-        assertThat(repository.findLastFeedingTimes(List.of(neverFed.animal().getId()))).isEmpty();
-    }
-
-    @Test
     void historySince_returnsAllAnimalsNewestFirstIncludingBorder() {
         var first = FeedingTestData.persist(em.getEntityManager(), NOW);
         var second = FeedingTestData.persist(em.getEntityManager(), NOW);
@@ -135,6 +103,38 @@ class FeedingRepositoryTest {
                 enclosureIds, from))
                 .extracting(Feedings::getNote)
                 .containsExactly("Second", "First");
+    }
+    @Test
+    void latestFeedings_returnOneLatestFeedingPerRequestedAnimalWithAuthor() {
+        var first = FeedingTestData.persist(em.getEntityManager(), NOW);
+        var second = FeedingTestData.persist(em.getEntityManager(), NOW);
+        var unrelated = FeedingTestData.persist(em.getEntityManager(), NOW);
+        persistFeeding(first, NOW.minusSeconds(7200), "Older");
+        Feedings latest = persistFeeding(first, NOW, "Latest");
+        latest.setRecordedBy(first.secondKeeper());
+        persistFeeding(second, NOW.minusSeconds(3600), "Only one");
+        persistFeeding(unrelated, NOW, "Not requested");
+        em.flush();
+        em.clear();
+
+        List<Feedings> result = repository.findLatestByAnimalIds(
+                List.of(first.animal().getId(), second.animal().getId()));
+
+        assertThat(result).extracting(Feedings::getNote).containsExactlyInAnyOrder("Latest", "Only one");
+        assertThat(result).filteredOn(f -> f.getNote().equals("Latest")).singleElement()
+                .extracting(f -> f.getRecordedBy().getFullName())
+                .isEqualTo(first.secondKeeper().getFullName());
+    }
+
+    @Test
+    void latestFeedings_omitAnimalsWithoutHistory() {
+        var neverFed = FeedingTestData.persist(em.getEntityManager(), NOW);
+        var other = FeedingTestData.persist(em.getEntityManager(), NOW);
+        persistFeeding(other, NOW, "Other");
+        em.flush();
+        em.clear();
+
+        assertThat(repository.findLatestByAnimalIds(List.of(neverFed.animal().getId()))).isEmpty();
     }
 
     private Feedings persistFeeding(FeedingTestData.Fixture fixture, Instant time, String note) {

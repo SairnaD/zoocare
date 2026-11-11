@@ -15,18 +15,18 @@ public interface FeedingRepository extends JpaRepository<Feedings, Long> {
 
     Optional<Feedings> findFirstByAnimalIdOrderByFedAtDescIdDesc(Long animalId);
 
-    @Query("""
-            select f.animal.id as animalId, max(f.fedAt) as lastFedAt
-            from Feedings f
-            where f.animal.id in :animalIds
-            group by f.animal.id
-            """)
-    List<LastFeedingTime> findLastFeedingTimes(@Param("animalIds") Collection<Long> animalIds);
-
     @EntityGraph(attributePaths = {"animal.species", "animal.enclosure", "recordedBy"})
     List<Feedings> findByFedAtGreaterThanEqualOrderByFedAtDescIdDesc(Instant from);
 
     @EntityGraph(attributePaths = {"animal.species", "animal.enclosure", "recordedBy"})
     List<Feedings> findByAnimalEnclosureIdInAndFedAtGreaterThanEqualOrderByFedAtDescIdDesc(
             Collection<Long> enclosureIds, Instant from);
+
+    @Query("""
+            select f from Feedings f
+            join fetch f.recordedBy
+            where f.animal.id in :animalIds
+              and f.fedAt = (select max(f2.fedAt) from Feedings f2 where f2.animal = f.animal)
+            """)
+    List<Feedings> findLatestByAnimalIds(@Param("animalIds") Collection<Long> animalIds);
 }

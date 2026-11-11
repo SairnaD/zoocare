@@ -7,6 +7,7 @@ import com.zoo.care.dto.FeedingRequest;
 import com.zoo.care.dto.FeedingResponse;
 import com.zoo.care.entity.*;
 import com.zoo.care.exception.AnimalDeletedException;
+import com.zoo.care.exception.FeedingTimeInFutureException;
 import com.zoo.care.exception.FeedingTooEarlyException;
 import com.zoo.care.exception.ResourceNotFoundException;
 import com.zoo.care.repository.AnimalRepository;
@@ -62,13 +63,13 @@ public class FeedingService {
         }
     }
 
-    private void checkFeedingInterval(Animal animal, Instant now) {
+    private void checkFeedingInterval(Animal animal, Instant fedAt) {
         feedingRepository.findFirstByAnimalIdOrderByFedAtDescIdDesc(animal.getId())
                 .ifPresent(lastFeeding -> {
                     Instant nextAllowedAt = lastFeeding.getFedAt()
                             .plus(animal.getFeedingIntervalHours(), ChronoUnit.HOURS);
 
-                    if (now.isBefore(nextAllowedAt)) {
+                    if (fedAt.isBefore(nextAllowedAt)) {
                         throw new FeedingTooEarlyException(nextAllowedAt);
                     }
                 });
@@ -111,20 +112,24 @@ public class FeedingService {
     public FeedingResponse recordFeeding(
             Long animalId,
             FeedingRequest request,
-            String username) {
+            String username,
+            Instant fedAt) {
 
         User user = getUser(username);
         Animal animal = getAnimalForFeeding(animalId);
 
         Instant now = Instant.now(clock);
+        Instant feedingTime = fedAt == null ? now : fedAt;
 
         checkFeedingAccess(user, animal, now);
 
         if (animal.getDeletedStatus() == DeletedStatus.DELETED) {
             throw new AnimalDeletedException();
         }
-
-        checkFeedingInterval(animal, now);
+        if (feedingTime.isAfter(now)) {
+            throw new FeedingTimeInFutureException();
+        }
+        checkFeedingInterval(animal, feedingTime);
 
         String note = request.note() == null ? null : request.note().trim();
         if (note != null && note.isEmpty()) {
@@ -137,7 +142,7 @@ public class FeedingService {
                         .recordedBy(user)
                         .food(request.food().trim())
                         .amountKg(request.amountKg())
-                        .fedAt(now)
+                        .fedAt(feedingTime)
                         .note(note)
                         .build());
 

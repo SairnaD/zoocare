@@ -27,12 +27,12 @@
         <div class="table-responsive d-none d-md-block">
             <table class="table align-middle mb-0" style="table-layout: fixed; min-width: 900px">
                 <colgroup>
-                    <col style="width: 10%">
-                    <col style="width: 10%">
-                    <col style="width: 11%">
-                    <col style="width: 14%">
                     <col style="width: 9%">
-                    <col style="width: 8%">
+                    <col style="width: 12%">
+                    <col style="width: 15%">
+                    <col style="width: 13%">
+                    <col style="width: 9%">
+                    <col style="width: 7%">
                     <col style="width: 12%">
                     <col>
                     <col style="width: 56px">
@@ -54,8 +54,13 @@
                 <tr>
                     <td class="fw-semibold text-break" th:text="${latest.animalName()}">Zuri</td>
                     <td class="text-break" th:text="${latest.speciesName()}">Giraffe</td>
-                    <td><span class="chip" th:text="${latest.enclosureName()}">Savanna 2</span></td>
-                    <td th:text="${#temporals.format(latest.fedAt().atZone(displayZone), 'dd.MM.yyyy HH:mm')}">05.11.2026 09:00</td>
+                    <td><span class="chip text-nowrap" th:classappend="|chip-${#strings.toLowerCase(latest.enclosureHabitat())}|"
+                              th:text="${latest.enclosureName()}">Savanna 2</span></td>
+                    <td>
+                        <div th:text="${#temporals.format(latest.fedAt().atZone(displayZone), 'HH:mm')}">09:00</div>
+                        <div class="small text-secondary"
+                             th:text="${#temporals.format(latest.fedAt().atZone(displayZone), 'dd.MM.yyyy')}">05.11.2026</div>
+                    </td>
                     <td class="text-break" th:text="${latest.food()}">Hay</td>
                     <td th:text="|${latest.amountKg().stripTrailingZeros().toPlainString()} kg|">12 kg</td>
                     <td class="text-break" th:text="${latest.recordedByName()}">Anna Berzina</td>
@@ -72,7 +77,11 @@
                 <tr th:each="feeding : ${group.earlier()}" class="collapse text-secondary"
                     th:classappend="|feedings-${latest.id()}|">
                     <td colspan="3"></td>
-                    <td th:text="${#temporals.format(feeding.fedAt().atZone(displayZone), 'dd.MM.yyyy HH:mm')}">04.11.2026 09:00</td>
+                    <td>
+                        <div th:text="${#temporals.format(feeding.fedAt().atZone(displayZone), 'HH:mm')}">09:00</div>
+                        <div class="small text-secondary"
+                             th:text="${#temporals.format(feeding.fedAt().atZone(displayZone), 'dd.MM.yyyy')}">04.11.2026</div>
+                    </td>
                     <td class="text-break" th:text="${feeding.food()}">Hay</td>
                     <td th:text="|${feeding.amountKg().stripTrailingZeros().toPlainString()} kg|">11 kg</td>
                     <td class="text-break" th:text="${feeding.recordedByName()}">Anna Berzina</td>
