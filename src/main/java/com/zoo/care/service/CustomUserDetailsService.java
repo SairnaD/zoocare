@@ -1,5 +1,6 @@
 package com.zoo.care.service;
 
+import com.zoo.care.entity.DeletedStatus;
 import com.zoo.care.entity.User;
 import com.zoo.care.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +24,7 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .username(user.getUsername())
                 .password(user.getPassword())
                 .roles(user.getRole().name())
+                .disabled(user.getDeletedStatus() == DeletedStatus.DELETED)
                 .build();
     }
-
 }

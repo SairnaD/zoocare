@@ -29,7 +29,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import org.mockito.ArgumentCaptor;
 
 @ExtendWith(MockitoExtension.class)
 class EnclosureServiceTest {
@@ -311,7 +310,8 @@ class EnclosureServiceTest {
     @Test
     void findAllKeepers_returnsAllKeepers() {
         User amy = User.builder().id(8L).username("amy").fullName("Amy Adams").role(Role.KEEPER).build();
-        when(userRepository.findAllByRoleOrderByFullNameAsc(Role.KEEPER)).thenReturn(List.of(amy, keeper()));
+        when(userRepository.findAllByRoleAndDeletedStatusOrderByFullName(Role.KEEPER, DeletedStatus.PRESENT))
+                .thenReturn(List.of(amy, keeper()));
 
         assertThat(enclosureService.findAllKeepers()).hasSize(2);
     }

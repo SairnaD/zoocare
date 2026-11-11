@@ -1,5 +1,6 @@
 package com.zoo.care.repository;
 
+import com.zoo.care.entity.DeletedStatus;
 import com.zoo.care.entity.Role;
 import com.zoo.care.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,5 +16,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByEmail(String email);
 
-    List<User> findAllByRoleOrderByFullNameAsc(Role role);
+    List<User> findAllByRoleAndDeletedStatusOrderByFullName(Role role, DeletedStatus deletedStatus);
 }
