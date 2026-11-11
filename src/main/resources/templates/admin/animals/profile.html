@@ -45,7 +45,7 @@
                                 <option th:each="enclosure : ${enclosures}"
                                         th:if="${enclosure.id() != animal.enclosureId()}"
                                         th:value="${enclosure.id()}"
-                                        th:text="|${enclosure.name()} (${enclosure.habitatType()}, capacity ${enclosure.capacity()})|">Savannah 2</option>
+                                        th:text="|${enclosure.name()} (${#strings.capitalize(#strings.toLowerCase(enclosure.habitatType()))}, capacity ${enclosure.capacity()})|">Savannah 2</option>
                             </select>
                         </div>
                         <div class="col-12 col-sm-4 d-grid">

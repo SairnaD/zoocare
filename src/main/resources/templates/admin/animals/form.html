@@ -26,7 +26,7 @@
                 <select th:field="*{speciesId}" th:errorclass="is-invalid" class="form-select">
                     <option value="">Choose species...</option>
                     <option th:each="species : ${speciesList}" th:value="${species.id()}"
-                            th:text="|${species.name()} (${species.habitatType()})|">Lion (SAVANNA)</option>
+                            th:text="|${species.name()} (${#strings.capitalize(#strings.toLowerCase(species.habitatType()))})|">Lion (Savanna)</option>
                 </select>
                 <div th:if="${#fields.hasErrors('speciesId')}" class="invalid-feedback d-flex gap-1">
                     <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
@@ -39,7 +39,7 @@
                 <select th:field="*{enclosureId}" th:errorclass="is-invalid" class="form-select">
                     <option value="">Choose enclosure...</option>
                     <option th:each="enclosure : ${enclosures}" th:value="${enclosure.id()}"
-                            th:text="|${enclosure.name()} (${enclosure.habitatType()}, capacity ${enclosure.capacity()})|">Savanna 1</option>
+                            th:text="|${enclosure.name()} (${#strings.capitalize(#strings.toLowerCase(enclosure.habitatType()))}, capacity ${enclosure.capacity()})|">Savanna 1</option>
                 </select>
                 <div class="form-text">The habitat of the enclosure must match the habitat of the species.</div>
                 <div th:if="${#fields.hasErrors('enclosureId')}" class="invalid-feedback d-flex gap-1">
